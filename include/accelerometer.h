@@ -13,6 +13,8 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 
+#define ACC_I2C_INSTANCE I2C4
+
 #define ACC_I2C_ADDR 0b0011000
 
 #define ACC_BYTES_NO 6 // number of acceleration data bytes (2 for each of the 3 axes)

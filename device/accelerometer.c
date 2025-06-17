@@ -40,6 +40,24 @@ AccelConfig* accelerometer_get_config(void) {
 }
 
 /**
+ * Initialise I2C peripheral for accelerometer
+ *
+ * Return: None
+ * */
+void accelerometer_init_i2c(void) {
+	accBus.Instance = ACC_I2C_INSTANCE;
+	accBus.Init.Timing = 0x00303D5B;
+	accBus.Init.OwnAddress1 = 0;
+	accBus.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+	accBus.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+	accBus.Init.OwnAddress2 = 0;
+	accBus.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+	accBus.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+	accBus.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+	HAL_I2C_Init(&accBus);
+}
+
+/**
  * Write data to accelerometer register
  *
  * data: Data to write
@@ -312,8 +330,7 @@ void task_accelerometer(void) {
  *
  * Return: None
  * */
-void task_init_accelerometer(I2C_HandleTypeDef* bus) {
-	accBus = *bus;
+void task_init_accelerometer(void) {
 	xTaskCreate((void*) &task_accelerometer , "TaskAccelerometer",
 			TASK_ACCELEROMETER_STACK_SIZE, NULL, TASK_ACCELEROMETER_STACK_SIZE,
 		&taskHandleAccelerometer);

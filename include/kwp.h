@@ -10,11 +10,27 @@
 
 #include <dgas_types.h>
 
+#ifdef DGAS_CONFIG_BUS_KWP_UART_INSTANCE
+#define KWP_UART_INSTANCE DGAS_CONFIG_BUS_KWP_UART_INSTANCE
+#else
+#define KWP_UART_INSTANCE UART4
+#endif /* DGAS_CONFIG_BUS_KWP_UART_INSTANCE */
+
+#ifdef DGAS_CONFIG_BUS_KWP_K_PORT
+#define K_LINE_PORT DGAS_CONFIG_BUS_K_PORT
+#define K_LINE_PIN DGAS_CONFIG_BUS_K_PIN
+#else
 #define K_LINE_PORT GPIOC
 #define K_LINE_PIN GPIO_PIN_10
+#endif /* DGAS_CONFIG_BUS_KWP_K_PORT */
 
+#ifdef DGAS_CONFIG_BUS_KWP_L_PORT
+#define L_LINE_PORT DGAS_CONFIG_BUS_KWP_L_PORT
+#define L_LINE_PIN DGAS_CONFIG_BUS_KWP_L_PIN
+#else
 #define L_LINE_PORT GPIOA
 #define L_LINE_PIN GPIO_PIN_10
+#endif /* DGAS_CONFIG_BUS_KWP_L_PORT */
 
 // timeout used for responses during initilisation of the bus
 // These responses can take longer

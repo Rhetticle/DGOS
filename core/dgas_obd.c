@@ -11,11 +11,11 @@
  * requests on their behalf e.g. dgas_sys
  * */
 #include <dgas_types.h>
-#include <string.h>
 #include <dgas_sys.h>
 #include <dgas_obd.h>
 #include <kwp.h>
 #include <bus.h>
+#include <string.h>
 
 // stores FreeRTOS handle of bus controller task
 static TaskHandle_t handleBusControl;

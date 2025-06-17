@@ -19,8 +19,8 @@ QueueHandle_t queueKwpResponse;
 
 // stores task handle
 static TaskHandle_t handleKwp;
-
-extern UART_HandleTypeDef huart4;
+// kwp UART bus
+static UART_HandleTypeDef kwpBus;
 
 /**
  * Get the task handle of the KWP bus task
@@ -43,22 +43,18 @@ void kwp_bus_k_gpio(void) {
 	HAL_GPIO_Init(K_LINE_PORT, &gpioInit);
 }
 
-/**
- * Change K line pin to UART TX
- * */
-void kwp_bus_k_tx(void) {
-	HAL_GPIO_DeInit(K_LINE_PORT, K_LINE_PIN);
-	huart4.Instance = UART4;
-	huart4.Init.BaudRate = KWP_BUS_BAUD_RATE;
-	huart4.Init.WordLength = UART_WORDLENGTH_8B;
-	huart4.Init.StopBits = UART_STOPBITS_1;
-	huart4.Init.Parity = UART_PARITY_NONE;
-	huart4.Init.Mode = UART_MODE_TX_RX;
-	huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-	huart4.Init.OverSampling = UART_OVERSAMPLING_16;
-	huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-	huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-	HAL_UART_Init(&huart4);
+void kwp_bus_init_uart(void) {
+	kwpBus.Instance = KWP_UART_INSTANCE;
+	kwpBus.Init.BaudRate = KWP_BUS_BAUD_RATE;
+	kwpBus.Init.WordLength = UART_WORDLENGTH_8B;
+	kwpBus.Init.StopBits = UART_STOPBITS_1;
+	kwpBus.Init.Parity = UART_PARITY_NONE;
+	kwpBus.Init.Mode = UART_MODE_TX_RX;
+	kwpBus.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	kwpBus.Init.OverSampling = UART_OVERSAMPLING_16;
+	kwpBus.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+	kwpBus.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+	HAL_UART_Init(&kwpBus);
 }
 
 
@@ -89,7 +85,8 @@ void kwp_bus_five_baud_init(void) {
 	HAL_GPIO_WritePin(L_LINE_PORT, L_LINE_PIN, 0);
 	vTaskDelay(205);
 	// change K pin back to TX ready for UART communication
-	kwp_bus_k_tx();
+	HAL_GPIO_DeInit(K_LINE_PORT, K_LINE_PIN);
+	kwp_bus_init_uart();
 }
 
 /**
@@ -103,11 +100,11 @@ BusStatus kwp_bus_write_byte(uint8_t byte) {
 	uint8_t tmp = byte;
 	uint8_t echo;
 
-	if (HAL_UART_Transmit(&huart4, &tmp, sizeof(uint8_t), 100) != HAL_OK) {
+	if (HAL_UART_Transmit(&kwpBus, &tmp, sizeof(uint8_t), 100) != HAL_OK) {
 		return BUS_TX_ERROR;
 	}
 	// the byte we just sent will be echoed back since it's all on the K-Line so we will read it back
-	if (HAL_UART_Receive(&huart4, &echo, sizeof(uint8_t), 100) != HAL_OK) {
+	if (HAL_UART_Receive(&kwpBus, &echo, sizeof(uint8_t), 100) != HAL_OK) {
 		return BUS_ECHO_ERROR;
 	}
 	if (echo != tmp) {
@@ -124,7 +121,7 @@ BusStatus kwp_bus_write_byte(uint8_t byte) {
  * Return: Status indicating success or failure
  * */
 BusStatus kwp_bus_read_byte(uint8_t* dest, uint32_t timeout) {
-	if (HAL_UART_Receive(&huart4, dest, sizeof(uint8_t), timeout) != HAL_OK) {
+	if (HAL_UART_Receive(&kwpBus, dest, sizeof(uint8_t), timeout) != HAL_OK) {
 		return BUS_RX_ERROR;
 	}
 	return BUS_OK;
@@ -392,6 +389,7 @@ void task_kwp_bus(void) {
  * Return: None
  * */
 void task_init_kwp_bus(void) {
+	kwpBus = huart4;
 	xTaskCreate((void*) &task_kwp_bus, "TaskKwpBus", TASK_KWP_STACK_SIZE,
 			NULL, TASK_KWP_PRIORITY, &handleKwp);
 }
