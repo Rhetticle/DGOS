@@ -22,6 +22,9 @@
 #define LCD_NRST_PORT GPIOB
 #endif
 
+#define LCD_RESOLUTION_X 480
+#define LCD_RESOLUTION_Y 480
+
 #define LCD_DC_BIT_POS 8
 
 #define LCD_CS_LOW() (HAL_GPIO_WritePin(LCD_CS_PORT, LCD_CS_PIN, 0))
