@@ -159,7 +159,7 @@ DeviceStatus accelerometer_set_range(uint8_t range) {
 		return status;
 	}
 	// clear range and set new range
-	tmp &= CTRL_REG_4_RANGE_MSK;
+	tmp &= ~CTRL_REG_4_RANGE_MSK;
 	tmp |= range;
 
 	// write new configuration to control register 4

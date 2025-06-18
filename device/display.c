@@ -60,7 +60,9 @@ void sendCommand(uint8_t cmd) {
 	uint8_t send = cmd;
 	LCD_CS_LOW();
 	vTaskDelay(1);
+	taskENTER_CRITICAL();
 	HAL_SPI_Transmit(&lcdBus, &send, sizeof(send), 10);
+	taskEXIT_CRITICAL();
 	vTaskDelay(1);
 	LCD_CS_HIGH();
 }
@@ -76,7 +78,9 @@ void sendData(uint8_t data) {
 	uint8_t send = (1 << LCD_DC_BIT_POS) | data;
 	LCD_CS_LOW();
 	vTaskDelay(1);
+	taskENTER_CRITICAL();
 	HAL_SPI_Transmit(&lcdBus, &send, sizeof(send), 10);
+	taskEXIT_CRITICAL();
 	vTaskDelay(1);
 	LCD_CS_HIGH();
 }
