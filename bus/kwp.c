@@ -100,13 +100,17 @@ BusStatus kwp_bus_write_byte(uint8_t byte) {
 	uint8_t tmp = byte;
 	uint8_t echo;
 
+	taskENTER_CRITICAL();
 	if (HAL_UART_Transmit(&kwpBus, &tmp, sizeof(uint8_t), 100) != HAL_OK) {
+		taskEXIT_CRITICAL();
 		return BUS_TX_ERROR;
 	}
 	// the byte we just sent will be echoed back since it's all on the K-Line so we will read it back
 	if (HAL_UART_Receive(&kwpBus, &echo, sizeof(uint8_t), 100) != HAL_OK) {
+		taskEXIT_CRITICAL();
 		return BUS_ECHO_ERROR;
 	}
+	taskEXIT_CRITICAL();
 	if (echo != tmp) {
 		return BUS_ECHO_ERROR;
 	}
@@ -121,9 +125,12 @@ BusStatus kwp_bus_write_byte(uint8_t byte) {
  * Return: Status indicating success or failure
  * */
 BusStatus kwp_bus_read_byte(uint8_t* dest, uint32_t timeout) {
+	taskENTER_CRITICAL();
 	if (HAL_UART_Receive(&kwpBus, dest, sizeof(uint8_t), timeout) != HAL_OK) {
+		taskEXIT_CRITICAL();
 		return BUS_RX_ERROR;
 	}
+	taskEXIT_CRITICAL();
 	return BUS_OK;
 }
 
@@ -156,9 +163,12 @@ BusStatus kwp_bus_write(uint8_t* data, uint32_t len) {
  * Return: Status indicating success or failure
  * */
 BusStatus kwp_bus_read(uint8_t* dest, uint32_t len, uint32_t timeout) {
+	taskENTER_CRITICAL();
 	if (HAL_UART_Receive(&huart4, dest, len, timeout) != HAL_OK) {
+		taskEXIT_CRITICAL();
 		return BUS_RX_ERROR;
 	}
+	taskEXIT_CRITICAL();
 	return BUS_OK;
 }
 
