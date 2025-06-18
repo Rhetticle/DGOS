@@ -11,8 +11,9 @@
 #include <i2c.h>
 
 // Queue for sending accelerometer values
-QueueHandle_t queueAccelerometer;
-
+QueueHandle_t queueAccelerometerData;
+// Queue for configuring accelerometer
+QueueHandle_t queueAccelerometerConf;
 // stores configuration of accelerometer
 static AccelConfig conf;
 // stores task handle for controller task
@@ -68,14 +69,17 @@ void accelerometer_init_i2c(void) {
 DeviceStatus accelerometer_write(uint8_t* data, uint32_t size, uint32_t reg) {
 	HAL_StatusTypeDef status;
 
+	taskENTER_CRITICAL();
 	if ((status = HAL_I2C_Mem_Write(&accBus, ACC_I2C_ADDR, reg, sizeof(uint8_t),
 			data, size, 10)) != HAL_OK) {
+		taskEXIT_CRITICAL();
 		if (status == HAL_TIMEOUT) {
 			return DEV_TIMEOUT;
 		} else {
 			return DEV_WRITE_ERROR;
 		}
 	}
+	taskEXIT_CRITICAL();
 	return DEV_OK;
 }
 
@@ -91,14 +95,17 @@ DeviceStatus accelerometer_write(uint8_t* data, uint32_t size, uint32_t reg) {
 DeviceStatus accelerometer_read(uint8_t* dest, uint32_t size, uint32_t reg, uint32_t timeout) {
 	HAL_StatusTypeDef status;
 
+	taskENTER_CRITICAL();
 	if ((status = HAL_I2C_Mem_Read(&accBus, ACC_I2C_ADDR, reg, sizeof(uint8_t),
 			dest, size, timeout)) != HAL_OK) {
+		taskEXIT_CRITICAL();
 		if (status == HAL_TIMEOUT) {
 			return DEV_TIMEOUT;
 		} else {
 			return DEV_WRITE_ERROR;
 		}
 	}
+	taskEXIT_CRITICAL();
 	return DEV_OK;
 }
 
@@ -178,11 +185,36 @@ DeviceStatus accelerometer_set_sample_rate(uint8_t sRate) {
 		return status;
 	}
 	// clear sample rate and set new sample rate
-	tmp &= CTRL_REG_1_RATE_MSK;
+	tmp &= ~CTRL_REG_1_RATE_MSK;
 	tmp |= sRate;
 
 	// write new configuration to control register 1
 	if ((status = accelerometer_write(&tmp, sizeof(uint8_t), CTRL_REG_1)) != DEV_OK) {
+		return status;
+	}
+	return DEV_OK;
+}
+
+/**
+ * Set measurement resolution mode of accelerometer. Either normal or
+ * high resolution.
+ *
+ * highRes: True for high resolution mode, false for normal
+ *
+ * Return: status indicating success or failure
+ * */
+DeviceStatus accelerometer_set_resolution(bool highRes) {
+	uint8_t tmp;
+	DeviceStatus status;
+
+	if ((status = accelerometer_read(&tmp, sizeof(uint8_t), CTRL_REG_4, 100)) != DEV_OK) {
+		return status;
+	}
+
+	tmp &= ~(1 << HR);
+	tmp |= highRes;
+
+	if ((status = accelerometer_write(&tmp, sizeof(uint8_t), CTRL_REG_4)) != DEV_OK) {
 		return status;
 	}
 	return DEV_OK;
@@ -218,7 +250,6 @@ DeviceStatus accelerometer_init(uint8_t sampleRate, uint8_t range, bool highRes)
 	conf.sampleRate = sampleRate;
 	conf.range = range;
 	conf.highRes = highRes;
-	conf.convRate = accelerometer_determine_conv_rate();
 
 	return DEV_OK;
 }
@@ -232,7 +263,7 @@ DeviceStatus accelerometer_init(uint8_t sampleRate, uint8_t range, bool highRes)
  * Return: None
  * */
 void accelerometer_conv_raw_to_acc(uint8_t* raw, float* acc) {
-	float convRate = conf.convRate;
+	float convRate = accelerometer_determine_conv_rate();
 	uint8_t offset;
 	uint16_t xRaw, yRaw, zRaw;
 
@@ -304,13 +335,45 @@ DeviceStatus accelerometer_self_test(void) {
 }
 
 /**
+ * Configure sample rate, resolution and range of accelerometer.
+ *
+ * config: Config struct to write to accelerometer
+ *
+ * Return: status indicating success or failure
+ * */
+DeviceStatus accelerometer_configure(AccelConfig* config) {
+	DeviceStatus status;
+
+	if (config->sampleRate != conf.sampleRate) {
+		if ((status = accelerometer_set_sample_rate(config->sampleRate)) != DEV_OK) {
+			return status;
+		}
+	}
+	if (config->range != conf.range) {
+		if ((status = accelerometer_set_range(config->range)) != DEV_OK) {
+			return status;
+		}
+	}
+	if (config->highRes != conf.highRes) {
+		if ((status = accelerometer_set_resolution(config->highRes)) != DEV_OK) {
+			return status;
+		}
+	}
+	return DEV_OK;
+}
+
+/**
  * Accelerometer control task thread function
  *
  * Return: None
  * */
 void task_accelerometer(void) {
 	AccelData accData = {0};
-	queueAccelerometer = xQueueCreate(1, sizeof(AccelData));
+	AccelConfig config = {0};
+
+
+	queueAccelerometerData = xQueueCreate(1, sizeof(AccelData));
+	queueAccelerometerConf = xQueueCreate(1, sizeof(AccelConfig));
 	accelerometer_init(ACC_SAMPLE_400HZ, ACC_RANGE_2G, true);
 
 	for(;;) {
@@ -318,7 +381,17 @@ void task_accelerometer(void) {
 			// do something
 		} else {
 			// send update to queue
-			xQueueSend(queueAccelerometer, &accData, 10);
+			xQueueSend(queueAccelerometerData, &accData, 10);
+		}
+		if (xQueueReceive(queueAccelerometerConf, &config, 10) == pdTRUE) {
+			// got configuration so configure accelerometer
+			if (accelerometer_configure(&config) != DEV_OK) {
+				// do something
+			}
+		}
+		if (ulTaskNotifyTake(pdTRUE, 10) == NOTI_ACCEL_GET_CONFIG) {
+			// task has requested accelerometer configuration so send to queue
+			xQueueSend(queueAccelerometerConf, &conf, 10);
 		}
 		vTaskDelay(50);
 	}

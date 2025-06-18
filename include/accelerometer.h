@@ -106,12 +106,14 @@ typedef struct {
 	uint8_t range;
 	uint8_t sampleRate;
 	bool highRes;
-	float convRate;
 }AccelConfig;
 
 #define TASK_ACCELEROMETER_PRIORITY   (tskIDLE_PRIORITY + 5)
 #define TASK_ACCELEROMETER_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
 
-extern QueueHandle_t queueAccelerometer;
+#define NOTI_ACCEL_GET_CONFIG 1
+
+extern QueueHandle_t queueAccelerometerData;
+extern QueueHandle_t queueAccelerometerConf;
 
 #endif /* INC_ACCELEROMETER_H_ */
