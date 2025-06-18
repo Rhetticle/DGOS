@@ -5,12 +5,14 @@
  *      Author: rhett
  */
 
+#include <FreeRTOS.h>
+#include <task.h>
 #include <display.h>
 #include <spi.h>
 
 // SPI bus used to send data/commands to display
 // Note that the actual pixel data is sent using RGB16 bus
-extern SPI_HandleTypeDef hspi1;
+static SPI_HandleTypeDef lcdBus;
 
 /**
  * Reset the display
@@ -25,6 +27,29 @@ void display_reset(void) {
 }
 
 /**
+ * Initialise SPI bus for LCD commands
+ *
+ * Return: None
+ * */
+void display_spi_init(void) {
+	lcdBus.Instance = LCD_SPI_INSTANCE;
+	lcdBus.Init.Mode = SPI_MODE_MASTER;
+	lcdBus.Init.Direction = SPI_DIRECTION_1LINE;
+	lcdBus.Init.DataSize = SPI_DATASIZE_4BIT;
+	lcdBus.Init.CLKPolarity = SPI_POLARITY_LOW;
+	lcdBus.Init.CLKPhase = SPI_PHASE_1EDGE;
+	lcdBus.Init.NSS = SPI_NSS_SOFT;
+	lcdBus.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+	lcdBus.Init.FirstBit = SPI_FIRSTBIT_MSB;
+	lcdBus.Init.TIMode = SPI_TIMODE_DISABLE;
+	lcdBus.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+	lcdBus.Init.CRCPolynomial = 7;
+	lcdBus.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
+	lcdBus.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
+	HAL_SPI_Init(&lcdBus);
+}
+
+/**
  * Send command to LCD
  *
  * cmd: Command to send
@@ -35,7 +60,7 @@ void sendCommand(uint8_t cmd) {
 	uint8_t send = cmd;
 	LCD_CS_LOW();
 	vTaskDelay(1);
-	HAL_SPI_Transmit(&hspi1, &send, sizeof(send), 10);
+	HAL_SPI_Transmit(&lcdBus, &send, sizeof(send), 10);
 	vTaskDelay(1);
 	LCD_CS_HIGH();
 }
@@ -51,7 +76,7 @@ void sendData(uint8_t data) {
 	uint8_t send = (1 << LCD_DC_BIT_POS) | data;
 	LCD_CS_LOW();
 	vTaskDelay(1);
-	HAL_SPI_Transmit(&hspi1, &send, sizeof(send), 10);
+	HAL_SPI_Transmit(&lcdBus, &send, sizeof(send), 10);
 	vTaskDelay(1);
 	LCD_CS_HIGH();
 }

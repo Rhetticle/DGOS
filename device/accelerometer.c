@@ -18,7 +18,6 @@ static AccelConfig conf;
 // stores task handle for controller task
 static TaskHandle_t taskHandleAccelerometer;
 // stores I2C bus being used with accelerometer
-// initialised in task_init_accelerometer
 static I2C_HandleTypeDef accBus;
 
 /**

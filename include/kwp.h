@@ -8,8 +8,6 @@
 #ifndef INC_KWP_H_
 #define INC_KWP_H_
 
-#include <dgas_types.h>
-
 #ifdef DGAS_CONFIG_BUS_KWP_UART_INSTANCE
 #define KWP_UART_INSTANCE DGAS_CONFIG_BUS_KWP_UART_INSTANCE
 #else

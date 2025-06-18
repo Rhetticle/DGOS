@@ -10,6 +10,8 @@
 
 #include <stm32f7xx.h>
 
+#define LCD_SPI_INSTANCE SPI1
+
 #ifndef LCD_CS_PIN
 #define LCD_CS_PIN GPIO_PIN_4
 #define LCD_CS_PORT GPIOB
