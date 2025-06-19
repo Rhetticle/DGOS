@@ -10,7 +10,7 @@
 // variables to store tick for debouncing
 static uint32_t lastNav;
 static uint32_t lastSel;
-
+// event group for button presses
 EventGroupHandle_t eventButtons;
 
 /**
@@ -40,10 +40,10 @@ void buttons_init(void) {
  * */
 void HAL_GPIO_EXTI_Callback(uint16_t pin) {
 	if ((pin == BTN_NAV_PIN) && (HAL_GetTick() > lastNav + 200)) {
-		xEventGroupSetBits(eventButtons, EVT_NAV_PRESSED);
+		xEventGroupSetBits(eventButtons, EVT_BUTTON_NAV_PRESSED);
 		lastNav = HAL_GetTick();
 	} else if ((pin == BTN_SEL_PIN) && (HAL_GetTick() > lastSel + 200)) {
-		xEventGroupSetBits(eventButtons, EVT_SEL_PRESSED);
+		xEventGroupSetBits(eventButtons, EVT_BUTTON_SEL_PRESSED);
 		lastSel = HAL_GetTick();
 	}
 }

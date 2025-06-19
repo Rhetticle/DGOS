@@ -71,11 +71,11 @@ void encoder_read(lv_indev_t* indev, lv_indev_data_t* data) {
 	EventBits_t uxBits = xEventGroupWaitBits(eventButton, EVT_BUTTON_PRESSED,
 											pdTRUE, pdFALSE, 0);
 
-	if (uxBits & EVT_NAV_PRESSED) {
+	if (uxBits & EVT_BUTTON_NAV_PRESSED) {
 		// navigation button pressed so increment encoder position
 		data->enc_diff++;
 	}
-	if (uxBits & EVT_SEL_PRESSED) {
+	if (uxBits & EVT_BUTTON_SEL_PRESSED) {
 		data->state = LV_INDEV_STATE_PRESSED;
 	} else {
 		data->state = LV_INDEV_STATE_RELEASED;
@@ -110,7 +110,7 @@ void task_dgas_ui(void) {
 	lv_tick_set_cb(HAL_GetTick);
 	// create display object and set start address of both frame buffers
 	display = lv_display_create(LCD_RESOLUTION_X, LCD_RESOLUTION_Y);
-	lv_display_set_buffers(display, (void*) UI_FRAME_BUFF_ONE_ADDR, (void*) UI_FRAME_BUFF_ONE_ADDR,
+	lv_display_set_buffers(display, (void*) UI_FRAME_BUFF_ONE_ADDR, (void*) UI_FRAME_BUFF_TWO_ADDR,
 						UI_FRAME_BUFF_SIZE, LV_DISP_RENDER_MODE_DIRECT);
 	taskEXIT_CRITICAL();
 

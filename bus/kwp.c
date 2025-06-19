@@ -31,6 +31,8 @@ TaskHandle_t task_kwp_get_handle(void) {
 
 /**
  * Change K line pin to a regular GPIO (needed for slow five baud init)
+ *
+ * Return: None
  * */
 void kwp_bus_k_gpio(void) {
 	GPIO_InitTypeDef gpioInit = {0};
@@ -43,6 +45,11 @@ void kwp_bus_k_gpio(void) {
 	HAL_GPIO_Init(K_LINE_PORT, &gpioInit);
 }
 
+/**
+ * Initialise UART peripheral for KWP bus (10400 baud rate)
+ *
+ * Return: None
+ * */
 void kwp_bus_init_uart(void) {
 	kwpBus.Instance = KWP_UART_INSTANCE;
 	kwpBus.Init.BaudRate = KWP_BUS_BAUD_RATE;
@@ -60,6 +67,8 @@ void kwp_bus_init_uart(void) {
 
 /**
  * Perform 5-baud init of KWP bus
+ *
+ * Return: None
  * */
 void kwp_bus_five_baud_init(void) {
 	// ensure K pin is setup as GPIO pin

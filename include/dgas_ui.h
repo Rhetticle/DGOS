@@ -23,12 +23,19 @@
 #define UI_FRAME_BUFF_ONE_ADDR (SDRAM_START_ADDR - UI_FRAME_BUFF_SIZE)
 #define UI_FRAME_BUFF_TWO_ADDR (SDRAM_START_ADDR)
 
+#define DGAS_ATTR_FLASH (__attribute__((section(".extFlash"))))
+
 typedef struct {
 	lv_obj_t* screen;
 	lv_group_t* group;
-	lv_obj_t** objs;
-	void (*evt_handler)(lv_event_t*);
 }Screen;
 
+typedef struct {
+	uint32_t min;
+	uint32_t max;
+	char* units;
+	char* name;
+	uint32_t colour;
+}GaugeParam;
 
 #endif /* INC_DGAS_UI_H_ */
