@@ -33,6 +33,10 @@
 #define LCD_NRST_LOW() (HAL_GPIO_WritePin(LCD_NRST_PORT, LCD_NRST_PIN, 0))
 #define LCD_NRST_HIGH() (HAL_GPIO_WritePin(LCD_NRST_PORT, LCD_NRST_PIN, 1))
 
+// Function prototypes
+void display_reset(void);
 void display_init(void);
+void sendCommand(uint8_t cmd);
+void sendData(uint8_t data);
 
 #endif /* INC_DISPLAY_H_ */

@@ -8,6 +8,8 @@
 #ifndef INC_DGAS_OBD_H_
 #define INC_DGAS_OBD_H_
 
+#include <dgas_types.h>
+
 extern QueueHandle_t queueOBDRequest;
 extern QueueHandle_t queueOBDResponse;
 extern EventGroupHandle_t eventOBDChangeBus;
@@ -94,5 +96,14 @@ typedef struct {
 #define EVT_OBD_BUS_CHANGE_9141 (1 << 1)
 #define EVT_OBD_BUS_CHANGE_CAN (1 << 2)
 #define EVT_OBD_BUS_CHANGE (EVT_OBD_BUS_CHANGE_KWP | EVT_OBD_BUS_CHANGE_9141 | EVT_OBD_BUS_CHANGE_CAN)
+
+// Function prototypes
+TaskHandle_t task_dgas_obd_get_handle(void);
+BusStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t timeout);
+BusStatus dgas_obd_get_dtc(uint8_t* dest);
+BusStatus dgas_obd_get_vehicle_info(OBDPid pid, uint8_t* dest);
+void dgas_obd_handle_request(OBDRequest* req, OBDResponse* resp);
+BusStatus dgas_obd_bus_change_handler(EventBits_t uxBits);
+void task_dgas_obd_init(void);
 
 #endif /* INC_DGAS_OBD_H_ */

@@ -23,18 +23,11 @@ static TaskHandle_t handleKwp;
 static UART_HandleTypeDef kwpBus;
 
 /**
- * Get the task handle of the KWP bus task
- * */
-TaskHandle_t task_kwp_get_handle(void) {
-	return handleKwp;
-}
-
-/**
  * Change K line pin to a regular GPIO (needed for slow five baud init)
  *
  * Return: None
  * */
-void kwp_bus_k_gpio(void) {
+static void kwp_bus_k_gpio(void) {
 	GPIO_InitTypeDef gpioInit = {0};
 	HAL_UART_DeInit(&huart4);
 
@@ -50,7 +43,7 @@ void kwp_bus_k_gpio(void) {
  *
  * Return: None
  * */
-void kwp_bus_init_uart(void) {
+static void kwp_bus_init_uart(void) {
 	kwpBus.Instance = KWP_UART_INSTANCE;
 	kwpBus.Init.BaudRate = KWP_BUS_BAUD_RATE;
 	kwpBus.Init.WordLength = UART_WORDLENGTH_8B;
@@ -64,6 +57,12 @@ void kwp_bus_init_uart(void) {
 	HAL_UART_Init(&kwpBus);
 }
 
+/**
+ * Get the task handle of the KWP bus task
+ * */
+TaskHandle_t task_kwp_get_handle(void) {
+	return handleKwp;
+}
 
 /**
  * Perform 5-baud init of KWP bus
@@ -265,7 +264,7 @@ BusStatus kwp_bus_init(void) {
  *
  * Return: Number of bytes copied to destination array
  * */
-uint8_t kwp_bus_build_packet(uint8_t* dest, uint8_t* data, uint32_t size) {
+static uint8_t kwp_bus_build_packet(uint8_t* dest, uint8_t* data, uint32_t size) {
 	if (size > OBD_BUS_REQUEST_MAX) {
 		return 0;
 	}

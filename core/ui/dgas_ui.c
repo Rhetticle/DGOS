@@ -21,6 +21,50 @@ static SemaphoreHandle_t semaphoreUI;
 // LVGL display
 static lv_display_t* display;
 
+
+/**
+ * Take UI semaphore
+ *
+ * Return: pdTRUE if taken, pdFALSE otherwise
+ * */
+static BaseType_t ui_take_semaphore(void) {
+	return xSemaphoreTake(semaphoreUI, 10);
+}
+
+/**
+ * Give UI semaphore
+ *
+ * Return: None
+ * */
+static void ui_give_semaphore(void) {
+	xSemaphoreGive(semaphoreUI);
+}
+
+/**
+ * LVGL encoder read callback function. Although a physical encoder is not being
+ * used, we can make LVGL think one is where navigation button presses correspond
+ * to rotation of encoder and selection button pressed correspond to encoder presses
+ *
+ * indev: LVGL input device
+ * data: LVGL input device data
+ *
+ * Return: None
+ * */
+static void encoder_read(lv_indev_t* indev, lv_indev_data_t* data) {
+	EventBits_t uxBits = xEventGroupWaitBits(eventButton, EVT_BUTTON_PRESSED,
+											pdTRUE, pdFALSE, 0);
+
+	if (uxBits & EVT_BUTTON_NAV_PRESSED) {
+		// navigation button pressed so increment encoder position
+		data->enc_diff++;
+	}
+	if (uxBits & EVT_BUTTON_SEL_PRESSED) {
+		data->state = LV_INDEV_STATE_PRESSED;
+	} else {
+		data->state = LV_INDEV_STATE_RELEASED;
+	}
+}
+
 /**
  * Get task handle of DGAS UI task
  *
@@ -37,49 +81,6 @@ TaskHandle_t task_dgas_ui_get_handle(void) {
  * */
 TaskHandle_t task_lvgl_get_handle(void) {
 	return taskHandleLVGL;
-}
-
-/**
- * Take UI semaphore
- *
- * Return: pdTRUE if taken, pdFALSE otherwise
- * */
-BaseType_t ui_take_semaphore(void) {
-	return xSemaphoreTake(semaphoreUI, 10);
-}
-
-/**
- * Give UI semaphore
- *
- * Return: None
- * */
-void ui_give_semaphore(void) {
-	xSemaphoreGive(semaphoreUI);
-}
-
-/**
- * LVGL encoder read callback function. Although a physical encoder is not being
- * used, we can make LVGL think one is where navigation button presses correspond
- * to rotation of encoder and selection button pressed correspond to encoder presses
- *
- * indev: LVGL input device
- * data: LVGL input device data
- *
- * Return: None
- * */
-void encoder_read(lv_indev_t* indev, lv_indev_data_t* data) {
-	EventBits_t uxBits = xEventGroupWaitBits(eventButton, EVT_BUTTON_PRESSED,
-											pdTRUE, pdFALSE, 0);
-
-	if (uxBits & EVT_BUTTON_NAV_PRESSED) {
-		// navigation button pressed so increment encoder position
-		data->enc_diff++;
-	}
-	if (uxBits & EVT_BUTTON_SEL_PRESSED) {
-		data->state = LV_INDEV_STATE_PRESSED;
-	} else {
-		data->state = LV_INDEV_STATE_RELEASED;
-	}
 }
 
 /**

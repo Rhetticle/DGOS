@@ -38,4 +38,9 @@ typedef struct {
 	uint32_t colour;
 }GaugeParam;
 
+// Function prototypes
+TaskHandle_t task_dgas_ui_get_handle(void);
+TaskHandle_t task_lvgl_get_handle(void);
+void task_dgas_ui_init(void);
+
 #endif /* INC_DGAS_UI_H_ */

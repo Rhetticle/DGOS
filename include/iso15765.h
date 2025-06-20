@@ -10,6 +10,9 @@
 
 #include <dgas_types.h>
 
+extern QueueHandle_t queueCANRequest;
+extern QueueHandle_t queueCANResponse;
+
 #ifndef DGAS_CONFIG_OBD_CAN_INSTANCE
 #define OBD_CAN_INSTANCE CAN1
 #else
@@ -37,8 +40,11 @@
 #define DGAS_TASK_OBD_CAN_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
 #define DGAS_TASK_OBD_CAN_PRIORITY   (tskIDLE_PRIORITY + 5)
 
-extern QueueHandle_t queueCANRequest;
-extern QueueHandle_t queueCANResponse;
-
+// Function prototypes
+TaskHandle_t task_obd_can_get_handle(void);
+BusStatus obd_can_send_data(uint8_t* data, uint32_t len);
+uint32_t obd_can_get_data(uint8_t* dest);
+BusStatus obd_can_make_request(BusRequest* req, BusResponse* resp);
+void task_init_obd_can(void);
 
 #endif /* INC_OBD_CAN_H_ */

@@ -23,27 +23,11 @@ QueueHandle_t queueCANRequest;
 QueueHandle_t queueCANResponse;
 
 /**
- * Get task handle of OBD CAN controller
- *
- * Return: Task handle of OBD CAN controller
- * */
-TaskHandle_t task_obd_can_get_handle(void) {
-	return taskHandleOBDCAN;
-}
-
-// This function is called by HAL in the HAL_CAN_IRQHandler()
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
-	if (hcan->Instance == OBD_CAN_INSTANCE) {
-		canGotMsg = true;
-	}
-}
-
-/**
  * Initialise CAN peripheral for OBD use
  *
  * Return: None
  * */
-void obd_can_init(void) {
+static void obd_can_init(void) {
 	canFilt.FilterActivation = CAN_FILTER_ENABLE;
 	canFilt.FilterFIFOAssignment = OBD_CAN_FILTER_FIFO;
 	canFilt.FilterMode = CAN_FILTERMODE_IDMASK;
@@ -75,6 +59,22 @@ void obd_can_init(void) {
 	// initialise CAN peripheral
 	HAL_CAN_Init(&canBus);
 	HAL_CAN_Start(&canBus);
+}
+
+/**
+ * Get task handle of OBD CAN controller
+ *
+ * Return: Task handle of OBD CAN controller
+ * */
+TaskHandle_t task_obd_can_get_handle(void) {
+	return taskHandleOBDCAN;
+}
+
+// This function is called by HAL in the HAL_CAN_IRQHandler()
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef* hcan) {
+	if (hcan->Instance == OBD_CAN_INSTANCE) {
+		canGotMsg = true;
+	}
 }
 
 /**
@@ -183,6 +183,8 @@ void task_obd_can(void) {
 
 /**
  * Initialise OBD CAN controller task
+ *
+ * Return: None
  * */
 void task_init_obd_can(void) {
 	xTaskCreate((void*) &task_obd_can, "TaskOBDCAN", DGAS_TASK_OBD_CAN_STACK_SIZE,

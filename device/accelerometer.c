@@ -44,7 +44,7 @@ AccelConfig* accelerometer_get_config(void) {
  *
  * Return: None
  * */
-void accelerometer_init_i2c(void) {
+static void accelerometer_init_i2c(void) {
 	accBus.Instance = ACC_I2C_INSTANCE;
 	accBus.Init.Timing = 0x00303D5B;
 	accBus.Init.OwnAddress1 = 0;
@@ -262,7 +262,7 @@ DeviceStatus accelerometer_init(uint8_t sampleRate, uint8_t range, bool highRes)
  *
  * Return: None
  * */
-void accelerometer_conv_raw_to_acc(uint8_t* raw, float* acc) {
+static void accelerometer_conv_raw_to_acc(uint8_t* raw, float* acc) {
 	float convRate = accelerometer_determine_conv_rate();
 	uint8_t offset;
 	uint16_t xRaw, yRaw, zRaw;

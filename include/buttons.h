@@ -22,4 +22,8 @@ extern EventGroupHandle_t eventButton;
 #define EVT_BUTTON_SEL_PRESSED (1 << 1)
 #define EVT_BUTTON_PRESSED (EVT_BUTTON_NAV_PRESSED | EVT_BUTTON_SEL_PRESSED)
 
+// Function prototypes
+void buttons_init(void);
+void task_buttons_init(void);
+
 #endif /* DGOS_INCLUDE_BUTTONS_H_ */

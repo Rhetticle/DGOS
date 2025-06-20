@@ -15,23 +15,11 @@
 static SPI_HandleTypeDef lcdBus;
 
 /**
- * Reset the display
- *
- * Return: None
- * */
-void display_reset(void) {
-	LCD_NRST_LOW();
-	vTaskDelay(10);
-	LCD_NRST_HIGH();
-	vTaskDelay(10);
-}
-
-/**
  * Initialise SPI bus for LCD commands
  *
  * Return: None
  * */
-void display_spi_init(void) {
+static void display_spi_init(void) {
 	lcdBus.Instance = LCD_SPI_INSTANCE;
 	lcdBus.Init.Mode = SPI_MODE_MASTER;
 	lcdBus.Init.Direction = SPI_DIRECTION_1LINE;
@@ -47,6 +35,18 @@ void display_spi_init(void) {
 	lcdBus.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
 	lcdBus.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
 	HAL_SPI_Init(&lcdBus);
+}
+
+/**
+ * Reset the display
+ *
+ * Return: None
+ * */
+void display_reset(void) {
+	LCD_NRST_LOW();
+	vTaskDelay(10);
+	LCD_NRST_HIGH();
+	vTaskDelay(10);
 }
 
 /**

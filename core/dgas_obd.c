@@ -14,6 +14,7 @@
 #include <dgas_sys.h>
 #include <dgas_obd.h>
 #include <kwp.h>
+#include <iso15765.h>
 #include <bus.h>
 #include <string.h>
 

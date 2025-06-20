@@ -8,10 +8,21 @@
 #ifndef INC_ACCELEROMETER_H_
 #define INC_ACCELEROMETER_H_
 
-#include "device.h"
+// Set to 1 if wish to use FreeRTOS with this driver
+#if 1
+#define ACC_USE_FREERTOS
+#endif
+
+
+#include <device.h>
 #include <stdbool.h>
-#include "FreeRTOS.h"
-#include "queue.h"
+
+#ifdef ACC_USE_FREERTOS
+#include <FreeRTOS.h>
+#include <queue.h>
+extern QueueHandle_t queueAccelerometerData;
+extern QueueHandle_t queueAccelerometerConf;
+#endif
 
 #define ACC_I2C_INSTANCE I2C4
 
@@ -96,6 +107,11 @@
 #define ACC_CONV_RATE_2G_NORMAL    0.004
 #define ACC_CONV_RATE_2G_HIGH_RES  0.001
 
+#define TASK_ACCELEROMETER_PRIORITY   (tskIDLE_PRIORITY + 5)
+#define TASK_ACCELEROMETER_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
+
+#define NOTI_ACCEL_GET_CONFIG 1
+
 typedef struct {
 	float accX;
 	float accY;
@@ -108,12 +124,22 @@ typedef struct {
 	bool highRes;
 }AccelConfig;
 
-#define TASK_ACCELEROMETER_PRIORITY   (tskIDLE_PRIORITY + 5)
-#define TASK_ACCELEROMETER_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
+// Function prototypes
+AccelConfig* accelerometer_get_config(void);
+DeviceStatus accelerometer_write(uint8_t* data, uint32_t size, uint32_t reg);
+DeviceStatus accelerometer_read(uint8_t* dest, uint32_t size, uint32_t reg, uint32_t timeout);
+float accelerometer_determine_conv_rate(void);
+DeviceStatus accelerometer_set_range(uint8_t range);
+DeviceStatus accelerometer_set_sample_rate(uint8_t sRate);
+DeviceStatus accelerometer_set_resolution(bool highRes);
+DeviceStatus accelerometer_init(uint8_t sampleRate, uint8_t range, bool highRes);
+DeviceStatus accelerometer_get_update(AccelData* data);
+DeviceStatus accelerometer_self_test(void);
+DeviceStatus accelerometer_configure(AccelConfig* config);
 
-#define NOTI_ACCEL_GET_CONFIG 1
-
-extern QueueHandle_t queueAccelerometerData;
-extern QueueHandle_t queueAccelerometerConf;
+#ifdef ACC_USE_FREERTOS
+TaskHandle_t task_get_handle_accelerometer(void);
+void task_init_accelerometer(void);
+#endif
 
 #endif /* INC_ACCELEROMETER_H_ */

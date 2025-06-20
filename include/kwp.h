@@ -8,6 +8,11 @@
 #ifndef INC_KWP_H_
 #define INC_KWP_H_
 
+#include <dgas_types.h>
+
+extern QueueHandle_t queueKwpRequest;
+extern QueueHandle_t queueKwpResponse;
+
 #ifdef DGAS_CONFIG_BUS_KWP_UART_INSTANCE
 #define KWP_UART_INSTANCE DGAS_CONFIG_BUS_KWP_UART_INSTANCE
 #else
@@ -54,15 +59,26 @@
 #define TASK_KWP_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
 #define QUEUE_KWP_LENGTH 5
 
-extern QueueHandle_t queueKwpRequest;
-extern QueueHandle_t queueKwpResponse;
-
 typedef struct {
 	uint8_t sync;
 	uint8_t kwOne;
 	uint8_t kwTwo;
 } KWPInit;
 
+// Function prototypes
+TaskHandle_t task_kwp_get_handle(void);
+void kwp_bus_five_baud_init(void);
+BusStatus kwp_bus_write_byte(uint8_t byte);
+BusStatus kwp_bus_read_byte(uint8_t* dest, uint32_t timeout);
+BusStatus kwp_bus_write(uint8_t* data, uint32_t len);
+BusStatus kwp_bus_read(uint8_t* dest, uint32_t len, uint32_t timeout);
+uint8_t kwp_bus_calc_checksum(uint8_t* data, uint32_t size);
+BusStatus kwp_bus_get_init_response(KWPInit* init);
+BusStatus kwp_bus_init(void);
+BusStatus kwp_bus_make_request(BusRequest* req);
+void kwp_bus_extract_data(uint8_t* response, uint32_t dataSize, uint8_t* dest);
+BusStatus kwp_bus_get_response(BusResponse* resp);
+BusStatus kwp_bus_handle_request(BusRequest* busReq, BusResponse* busResp);
 void task_init_kwp_bus(void);
 
 #endif /* INC_KWP_H_ */
