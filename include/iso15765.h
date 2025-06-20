@@ -9,6 +9,7 @@
 #define INC_OBD_CAN_H_
 
 #include <dgas_types.h>
+#include <bus.h>
 
 extern QueueHandle_t queueCANRequest;
 extern QueueHandle_t queueCANResponse;

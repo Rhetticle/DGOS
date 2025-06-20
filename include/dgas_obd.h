@@ -9,6 +9,7 @@
 #define INC_DGAS_OBD_H_
 
 #include <dgas_types.h>
+#include <bus.h>
 
 extern QueueHandle_t queueOBDRequest;
 extern QueueHandle_t queueOBDResponse;

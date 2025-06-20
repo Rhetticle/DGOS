@@ -11,6 +11,7 @@
 #include <lvgl.h>
 #include <ltdc.h>
 #include <buttons.h>
+#include <ui.h>
 
 // Stores handle of UI controller task
 static TaskHandle_t taskHandleDgasUi;

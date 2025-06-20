@@ -407,7 +407,6 @@ void task_kwp_bus(void) {
  * Return: None
  * */
 void task_init_kwp_bus(void) {
-	kwpBus = huart4;
 	xTaskCreate((void*) &task_kwp_bus, "TaskKwpBus", TASK_KWP_STACK_SIZE,
 			NULL, TASK_KWP_PRIORITY, &handleKwp);
 }
