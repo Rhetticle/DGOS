@@ -28,7 +28,9 @@
 typedef struct {
 	lv_obj_t* screen;
 	lv_group_t* group;
-}Screen;
+}UI;
+
+typedef void (*evtCallback) (lv_event_t*);
 
 typedef struct {
 	uint32_t min;
@@ -38,9 +40,15 @@ typedef struct {
 	uint32_t colour;
 }GaugeParam;
 
+typedef enum {
+	UI_CALLBACK_USE_FOR_ALL,
+	UI_CALLBACK_USE_FOR_SCREEN
+}UICallbackOpt;
+
 // Function prototypes
 TaskHandle_t task_dgas_ui_get_handle(void);
 TaskHandle_t task_lvgl_get_handle(void);
+void ui_load_screen(UI* ui);
 void task_dgas_ui_init(void);
 
 #endif /* INC_DGAS_UI_H_ */

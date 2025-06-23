@@ -17,11 +17,16 @@
 static TaskHandle_t taskHandleDgasUi;
 // Stores handle of LVGL task
 static TaskHandle_t taskHandleLVGL;
-// semaphore to synchronise GUI operations
+// semaphore to synchronise UI operations, any task which wishes to modify
+// the UI in some way must acquire this semaphore beforehand as LVGL will
+// update UI asynchronously to other tasks which can cause visual UI bugs
 static SemaphoreHandle_t semaphoreUI;
 // LVGL display
 static lv_display_t* display;
-
+// LVGL input device (encoder)
+static lv_indev_t* indevEnc;
+// UIs
+static UI uiGauge, uiMenu, uiMeas, uiDebug, uiDTC, uiSelfTest, uiSettings, uiAbout;
 
 /**
  * Take UI semaphore
@@ -67,6 +72,130 @@ static void encoder_read(lv_indev_t* indev, lv_indev_data_t* data) {
 }
 
 /**
+ * Frame buffer flush function to be used with LVGL
+ *
+ * Return: None
+ * */
+static void ui_flush_frame_buffer(lv_display_t* disp, const lv_area_t* area, uint8_t* map) {
+	if(lv_display_is_double_buffered(disp) && lv_display_flush_is_last(disp)) {
+		HAL_LTDC_SetAddress_NoReload(&hltdc, (uint32_t)map, 0);
+	    HAL_LTDC_Reload(&hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
+	}
+	lv_display_flush_ready(disp);
+}
+
+/**
+ * LVGL event callback function for gauge screen.
+ *
+ * evt: Pointer to LVGL event object
+ *
+ * Return: None
+ * */
+static void ui_event_callback_gauge(lv_event_t* evt) {
+	lv_event_code_t code = lv_event_get_code(evt);
+
+	if (code == LV_EVENT_CLICKED) {
+		ui_load_screen(&uiMenu);
+	}
+}
+
+/**
+ * LVGL event callback function for menu screen.
+ *
+ * evt: Pointer to LVGL event object
+ *
+ * Return: None
+ * */
+static void ui_event_callback_menu(lv_event_t* evt) {
+	lv_event_code_t code = lv_event_get_code(evt);
+	lv_obj_t* focused = lv_group_get_focused(lv_indev_get_group(indevEnc));
+
+	if (code == LV_EVENT_CLICKED) {
+		if (focused == objects.measure_btn) {
+			ui_load_screen(&uiMeas);
+		} else if (focused == objects.obd2_debug_btn) {
+			ui_load_screen(&uiDebug);
+		} else if (focused == objects.diagnose_btn) {
+			ui_load_screen(&uiDTC);
+		} else if (focused == objects.self_test_btn) {
+			ui_load_screen(&uiSelfTest);
+		} else if (focused == objects.settings_btn) {
+			ui_load_screen(&uiSettings);
+		} else if (focused == objects.about_btn) {
+			ui_load_screen(&uiAbout);
+		} else if (focused == objects.menu_exit_btn) {
+			ui_load_screen(&uiGauge);
+		}
+	}
+}
+
+/**
+ * LVGL event callback function for measure screen.
+ *
+ * evt: Pointer to LVGL event object
+ *
+ * Return: None
+ * */
+static void ui_event_callback_meas(lv_event_t* evt) {
+
+}
+
+/**
+ * LVGL event callback function for debug screen.
+ *
+ * evt: Pointer to LVGL event object
+ *
+ * Return: None
+ * */
+static void ui_event_callback_debug(lv_event_t* evt) {
+
+}
+
+/**
+ * LVGL event callback function for DTC screen.
+ *
+ * evt: Pointer to LVGL event object
+ *
+ * Return: None
+ * */
+static void ui_event_callback_dtc(lv_event_t* evt) {
+
+}
+
+/**
+ * LVGL event callback function for self test screen.
+ *
+ * evt: Pointer to LVGL event object
+ *
+ * Return: None
+ * */
+static void ui_event_callback_self_test(lv_event_t* evt) {
+
+}
+
+/**
+ * LVGL event callback function for settings screen.
+ *
+ * evt: Pointer to LVGL event object
+ *
+ * Return: None
+ * */
+static void ui_event_callback_settings(lv_event_t* evt) {
+
+}
+
+/**
+ * LVGL event callback function for about screen.
+ *
+ * evt: Pointer to LVGL event object
+ *
+ * Return: None
+ * */
+static void ui_event_callback_about(lv_event_t* evt) {
+
+}
+
+/**
  * Get task handle of DGAS UI task
  *
  * Return: Task handle of DGAS UI task
@@ -85,16 +214,106 @@ TaskHandle_t task_lvgl_get_handle(void) {
 }
 
 /**
- * Frame buffer flush function to be used with LVGL
+ * Load a new screen onto display. Will load screen LVGL object and
+ * set indev group to group for that specific screen
  *
  * Return: None
  * */
-void ui_flush_frame_buffer(lv_display_t* disp, const lv_area_t area, uint8_t* map) {
-	if(lv_display_is_double_buffered(disp) && lv_display_flush_is_last(disp)) {
-		HAL_LTDC_SetAddress_NoReload(&hltdc, (uint32_t)map, 0);
-	    HAL_LTDC_Reload(&hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
+void ui_load_screen(UI* ui) {
+	lv_screen_load(ui->screen);
+	lv_indev_set_group(indevEnc, ui->group);
+}
+
+/**
+ * Initialise UI object.
+ *
+ * init: UI struct to initialise
+ * scrn: Screen associated with UI
+ * eventable: Screen objects which can cause event (i.e. user interactable)
+ * cb: Event callback function
+ * size: Number of eventable objects
+ *
+ * Return: None
+ * */
+void ui_init_struct(UI* init, lv_obj_t* scrn, lv_obj_t** eventable,
+					uint32_t size, evtCallback cb, UICallbackOpt opt) {
+	init->screen = scrn;
+	init->group = lv_group_create();
+
+	if (opt == UI_CALLBACK_USE_FOR_ALL) {
+		for (int i = 0; i < size; i++) {
+			lv_obj_add_event_cb(eventable[i], cb, LV_EVENT_ALL, NULL);
+			lv_group_add_obj(init->group, eventable[i]);
+		}
+	} else if (opt == UI_CALLBACK_USE_FOR_SCREEN) {
+		lv_obj_add_event_cb(scrn, cb, LV_EVENT_ALL, NULL);
+		lv_group_add_obj(init->group, scrn);
 	}
-	lv_display_flush_ready(disp);
+}
+
+/**
+ * Intialise ui structs
+ *
+ * Return: None
+ * */
+void ui_init_all_uis(void) {
+	lv_obj_t* menuEventable[] 	  = {objects.measure_btn,
+									 objects.obd2_debug_btn,
+									 objects.diagnose_btn,
+									 objects.self_test_btn,
+									 objects.settings_btn,
+									 objects.about_btn,
+									 objects.menu_exit_btn};
+
+	lv_obj_t* measEventable[]     = {objects.eng_speed_btn,
+								     objects.vehicle_speed_btn,
+								     objects.eng_load_btn,
+								     objects.coolant_temp_btn,
+								     objects.boost_btn,
+								     objects.intake_temp_btn,
+								     objects.maf_btn,
+								     objects.fuel_pressure_btn};
+
+	lv_obj_t* debugEventable[] 	  = {objects.obd2_pause_btn,
+								  	 objects.obd2_resume_btn,
+								     objects.obd2_exit_btn};
+
+	lv_obj_t* dtcEventable[]      = {objects.diagnose_clear_btn,
+								  	 objects.diagnose_exit_btn};
+
+	lv_obj_t* selfTestEventable[] = {objects.self_test_run_btn,
+									 objects.self_test_exit_btn};
+
+	lv_obj_t* settingsEventable[] = {objects.settings_param_dropdown,
+									 objects.settings_bus_dropdown,
+									 objects.settings_exit_btn};
+
+	lv_obj_t* aboutEventable[]    = {objects.about_exit_btn};
+
+	// initialise UI structs
+	ui_init_struct(&uiGauge, objects.gauge_main_ui, NULL, 0,
+					&ui_event_callback_gauge, UI_CALLBACK_USE_FOR_SCREEN);
+
+	ui_init_struct(&uiMenu, objects.menu, menuEventable, sizeof(menuEventable),
+					&ui_event_callback_menu, UI_CALLBACK_USE_FOR_ALL);
+
+	ui_init_struct(&uiMeas, objects.measure, measEventable, sizeof(menuEventable),
+					&ui_event_callback_meas, UI_CALLBACK_USE_FOR_ALL);
+
+	ui_init_struct(&uiDebug, objects.obd2_debug, debugEventable, sizeof(debugEventable),
+					&ui_event_callback_debug, UI_CALLBACK_USE_FOR_ALL);
+
+	ui_init_struct(&uiDTC, objects.diagnose, dtcEventable, sizeof(dtcEventable),
+					&ui_event_callback_dtc, UI_CALLBACK_USE_FOR_ALL);
+
+	ui_init_struct(&uiSelfTest, objects.self_test, selfTestEventable, sizeof(selfTestEventable),
+					&ui_event_callback_self_test, UI_CALLBACK_USE_FOR_ALL);
+
+	ui_init_struct(&uiSettings, objects.settings, settingsEventable, sizeof(settingsEventable),
+					&ui_event_callback_settings, UI_CALLBACK_USE_FOR_ALL);
+
+	ui_init_struct(&uiAbout, objects.about, aboutEventable, sizeof(aboutEventable),
+					&ui_event_callback_about, UI_CALLBACK_USE_FOR_ALL);
 }
 
 /**
@@ -114,6 +333,12 @@ void task_dgas_ui(void) {
 	display = lv_display_create(LCD_RESOLUTION_X, LCD_RESOLUTION_Y);
 	lv_display_set_buffers(display, (void*) UI_FRAME_BUFF_ONE_ADDR, (void*) UI_FRAME_BUFF_TWO_ADDR,
 						UI_FRAME_BUFF_SIZE, LV_DISP_RENDER_MODE_DIRECT);
+	// set the flush callback function for LVGL
+	lv_display_set_flush_cb(display, ui_flush_frame_buffer);
+	// create input device and set type and read callback function
+	indevEnc = lv_indev_create();
+	lv_indev_set_type(indevEnc, LV_INDEV_TYPE_ENCODER);
+	lv_indev_set_read_cb(indevEnc, encoder_read);
 	taskEXIT_CRITICAL();
 
 	for(;;) {
@@ -127,6 +352,7 @@ void task_dgas_ui(void) {
  * Return: None
  * */
 void task_lvgl_tick(void) {
+	lv_init();
 
 	for(;;) {
 		if (ui_take_semaphore() == pdTRUE) {
