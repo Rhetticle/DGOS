@@ -203,6 +203,6 @@ void task_dgas_obd(void) {
  * Return: None
  * */
 void task_dgas_obd_init(void) {
-	xTaskCreate((void*)&task_dgas_obd, "BusControl", TASK_BUS_CONTROL_STACK_SIZE,
+	xTaskCreate((void*)&task_dgas_obd, "TaskOBD", TASK_BUS_CONTROL_STACK_SIZE,
 			NULL, TASK_BUS_CONTROL_PRIORITY, &handleBusControl);
 }

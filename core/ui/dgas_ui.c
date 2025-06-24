@@ -31,10 +31,10 @@ static UI uiGauge, uiMenu, uiMeas, uiDebug, uiDTC, uiSelfTest, uiSettings, uiAbo
 /**
  * Take UI semaphore
  *
- * Return: pdTRUE if taken, pdFALSE otherwise
+ * Return: None
  * */
-static BaseType_t ui_take_semaphore(void) {
-	return xSemaphoreTake(semaphoreUI, 10);
+static void ui_take_semaphore(void) {
+	xSemaphoreTake(semaphoreUI, portMAX_DELAY);
 }
 
 /**
@@ -137,7 +137,11 @@ static void ui_event_callback_menu(lv_event_t* evt) {
  * Return: None
  * */
 static void ui_event_callback_meas(lv_event_t* evt) {
+	lv_event_code_t code = lv_event_get_code(evt);
 
+	if (code == LV_EVENT_CLICKED) {
+
+	}
 }
 
 /**
@@ -214,13 +218,42 @@ TaskHandle_t task_lvgl_get_handle(void) {
 }
 
 /**
+ * Initialise external DRAM for UI frame buffers
+ *
+ * Return: None
+ * */
+/*
+void dram_init(void) {
+	taskENTER_CRITICAL();
+	FMC_SDRAM_CommandTypeDef Command;
+	 Command.CommandMode            = FMC_SDRAM_CMD_CLK_ENABLE;
+	 Command.CommandTarget          = FMC_SDRAM_CMD_TARGET_BANK1;
+	 Command.AutoRefreshNumber      = 1;
+	 Command.ModeRegisterDefinition = 0;
+	 HAL_SDRAM_SendCommand(&hsdram1, &Command, 0xfff);
+	 HAL_Delay(1);
+	 Command.CommandMode            = FMC_SDRAM_CMD_PALL;
+	 HAL_SDRAM_SendCommand(&hsdram1, &Command, 0xfff);
+	 Command.CommandMode            = FMC_SDRAM_CMD_AUTOREFRESH_MODE;
+	 Command.AutoRefreshNumber      = 2;
+	 HAL_SDRAM_SendCommand(&hsdram1, &Command, 0xfff);
+	 Command.CommandMode            = FMC_SDRAM_CMD_LOAD_MODE;
+	 Command.ModeRegisterDefinition =  (uint32_t)0 | 0<<3 | 2<<4 | 0<<7 | 1<<9;
+	 HAL_SDRAM_SendCommand(&hsdram1, &Command, 0xfff);
+	 HAL_SDRAM_ProgramRefreshRate(&hsdram1, 1105);
+	 taskEXIT_CRITICAL();
+}*/
+
+/**
  * Load a new screen onto display. Will load screen LVGL object and
  * set indev group to group for that specific screen
  *
  * Return: None
  * */
 void ui_load_screen(UI* ui) {
+	ui_take_semaphore();
 	lv_screen_load(ui->screen);
+	ui_give_semaphore();
 	lv_indev_set_group(indevEnc, ui->group);
 }
 
@@ -257,6 +290,7 @@ void ui_init_struct(UI* init, lv_obj_t* scrn, lv_obj_t** eventable,
  * Return: None
  * */
 void ui_init_all_uis(void) {
+	// eventable/interactable objects for each UI
 	lv_obj_t* menuEventable[] 	  = {objects.measure_btn,
 									 objects.obd2_debug_btn,
 									 objects.diagnose_btn,
@@ -317,6 +351,32 @@ void ui_init_all_uis(void) {
 }
 
 /**
+ * Initialise LVGL related functionality for UI
+ *
+ * Return: None
+ * */
+void ui_init_lvgl(void) {
+	lv_init();
+	// set LVGL tick callback
+	lv_tick_set_cb(HAL_GetTick);
+	// create display object and set start address of both frame buffers
+	display = lv_display_create(LCD_RESOLUTION_X, LCD_RESOLUTION_Y);
+#ifdef DGAS_CONFIG_USE_DOUBLE_BUFFERING
+	lv_display_set_buffers(display, (void*) UI_FRAME_BUFF_ONE_ADDR, (void*) UI_FRAME_BUFF_TWO_ADDR,
+							UI_FRAME_BUFF_SIZE, LV_DISP_RENDER_MODE_DIRECT);
+	// set the flush callback function for LVGL
+#else
+	lv_display_set_buffers(display, (void*) UI_FRAME_BUFF_ONE_ADDR, (void*) NULL,
+							UI_FRAME_BUFF_SIZE, LV_DISP_RENDER_MODE_DIRECT);
+#endif
+	lv_display_set_flush_cb(display, ui_flush_frame_buffer);
+	// create input device and set type and read callback function
+	indevEnc = lv_indev_create();
+	lv_indev_set_type(indevEnc, LV_INDEV_TYPE_ENCODER);
+	lv_indev_set_read_cb(indevEnc, encoder_read);
+}
+
+/**
  * Thread function for DGAS UI task
  *
  * Return: None
@@ -326,23 +386,16 @@ void task_dgas_ui(void) {
 	semaphoreUI = xSemaphoreCreateBinary();
 	display_init();
 	// dram_init();
-	lv_init();
-	// set LVGL tick callback
-	lv_tick_set_cb(HAL_GetTick);
-	// create display object and set start address of both frame buffers
-	display = lv_display_create(LCD_RESOLUTION_X, LCD_RESOLUTION_Y);
-	lv_display_set_buffers(display, (void*) UI_FRAME_BUFF_ONE_ADDR, (void*) UI_FRAME_BUFF_TWO_ADDR,
-						UI_FRAME_BUFF_SIZE, LV_DISP_RENDER_MODE_DIRECT);
-	// set the flush callback function for LVGL
-	lv_display_set_flush_cb(display, ui_flush_frame_buffer);
-	// create input device and set type and read callback function
-	indevEnc = lv_indev_create();
-	lv_indev_set_type(indevEnc, LV_INDEV_TYPE_ENCODER);
-	lv_indev_set_read_cb(indevEnc, encoder_read);
+	ui_init_lvgl();
+	// EEZ init
+	ui_init();
+	// DGAS UI init
+	ui_init_all_uis();
+	ui_load_screen(&uiGauge);
 	taskEXIT_CRITICAL();
 
 	for(;;) {
-
+		vTaskDelay(30);
 	}
 }
 
@@ -355,11 +408,10 @@ void task_lvgl_tick(void) {
 	lv_init();
 
 	for(;;) {
-		if (ui_take_semaphore() == pdTRUE) {
-			// got semaphore, update UI
-			lv_task_handler();
-			ui_give_semaphore();
-		}
+		ui_take_semaphore();
+		// got semaphore, update UI
+		lv_task_handler();
+		ui_give_semaphore();
 		vTaskDelay(10);
 	}
 }
