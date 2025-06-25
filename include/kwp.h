@@ -10,13 +10,23 @@
 
 #include <dgas_types.h>
 
+// in bound and out bound queues for KWP bus
 extern QueueHandle_t queueKwpRequest;
 extern QueueHandle_t queueKwpResponse;
 
 #ifdef DGAS_CONFIG_BUS_KWP_UART_INSTANCE
 #define KWP_UART_INSTANCE DGAS_CONFIG_BUS_KWP_UART_INSTANCE
 #else
-#define KWP_UART_INSTANCE UART4
+#define KWP_UART_INSTANCE 			UART4
+#define KWP_UART_TX_PORT 			GPIOC
+#define KWP_UART_TX_PIN 			GPIO_PIN_10
+#define KWP_UART_RX_PORT 			GPIOC
+#define KWP_UART_RX_PIN 			GPIO_PIN_11
+#define __KWP_UART_TX_PORT_CLK_EN() __HAL_RCC_GPIOC_CLK_ENABLE();
+#define __KWP_UART_RX_PORT_CLK_EN() __HAL_RCC_GPIOC_CLK_ENABLE();
+#define __KWP_UART_GPIO_CLK_EN()   {__KWP_UART_TX_PORT_CLK_EN();\
+								    __KWP_UART_RX_PORT_CLK_EN();}
+#define __KWP_UART_CLK_EN() 		__HAL_RCC_UART4_CLK_ENABLE();
 #endif /* DGAS_CONFIG_BUS_KWP_UART_INSTANCE */
 
 #ifdef DGAS_CONFIG_BUS_KWP_K_PORT

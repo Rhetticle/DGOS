@@ -23,13 +23,37 @@ static TaskHandle_t handleKwp;
 static UART_HandleTypeDef kwpBus;
 
 /**
+ * Initialise GPIO pins required for UART for KWP bus
+ *
+ * Return: None
+ * */
+static void kwp_bus_gpio_init(void) {
+	__KWP_UART_GPIO_CLK_EN();
+	GPIO_InitTypeDef init = {0};
+
+	init.Alternate = GPIO_AF8_UART4;
+	init.Mode = GPIO_MODE_AF_PP;
+	init.Speed = GPIO_SPEED_FAST;
+	init.Pull = GPIO_NOPULL;
+
+	init.Pin = KWP_UART_TX_PIN;
+
+	HAL_GPIO_Init(KWP_UART_TX_PORT, &init);
+
+	init.Pin = KWP_UART_RX_PIN;
+
+	HAL_GPIO_Init(KWP_UART_RX_PORT, &init);
+}
+
+/**
  * Change K line pin to a regular GPIO (needed for slow five baud init)
  *
  * Return: None
  * */
 static void kwp_bus_k_gpio(void) {
 	GPIO_InitTypeDef gpioInit = {0};
-	HAL_UART_DeInit(&huart4);
+	// De-init UART ready for GPIO
+	HAL_UART_DeInit(&kwpBus);
 
 	gpioInit.Pin = K_LINE_PIN;
 	gpioInit.Mode = GPIO_MODE_OUTPUT_PP;
@@ -43,7 +67,9 @@ static void kwp_bus_k_gpio(void) {
  *
  * Return: None
  * */
-static void kwp_bus_init_uart(void) {
+static void kwp_bus_uart_init(void) {
+	// enable clocks required for UART
+	__KWP_UART_CLK_EN();
 	kwpBus.Instance = KWP_UART_INSTANCE;
 	kwpBus.Init.BaudRate = KWP_BUS_BAUD_RATE;
 	kwpBus.Init.WordLength = UART_WORDLENGTH_8B;
@@ -55,6 +81,16 @@ static void kwp_bus_init_uart(void) {
 	kwpBus.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
 	kwpBus.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
 	HAL_UART_Init(&kwpBus);
+}
+
+/**
+ * Initialise hardware required for KWP bus
+ *
+ * Return: None
+ * */
+void kwp_bus_init_hardware(void) {
+	kwp_bus_gpio_init();
+	kwp_bus_uart_init();
 }
 
 /**
@@ -94,7 +130,7 @@ void kwp_bus_five_baud_init(void) {
 	vTaskDelay(205);
 	// change K pin back to TX ready for UART communication
 	HAL_GPIO_DeInit(K_LINE_PORT, K_LINE_PIN);
-	kwp_bus_init_uart();
+	kwp_bus_uart_init();
 }
 
 /**
@@ -231,6 +267,9 @@ BusStatus kwp_bus_init(void) {
 	uint8_t nkwTwo;
 	uint8_t nAddress;
 
+	// initialise hardware
+	kwp_bus_init_hardware();
+	// perform 5 baud init sequency
 	kwp_bus_five_baud_init();
 
 	if (kwp_bus_get_init_response(&init) != BUS_OK) {
@@ -382,7 +421,9 @@ BusStatus kwp_bus_handle_request(BusRequest* busReq, BusResponse* busResp) {
  * Return: None
  * */
 void task_kwp_bus(void) {
-	kwp_bus_init();
+	if (kwp_bus_init() != BUS_OK) {
+		// notify dgas_sys
+	}
 
 	BusRequest req = {0};
 	BusResponse resp = {0};
