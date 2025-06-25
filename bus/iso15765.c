@@ -23,11 +23,36 @@ QueueHandle_t queueCANRequest;
 QueueHandle_t queueCANResponse;
 
 /**
+ * Initialise GPIO pins required for OBD CAN
+ *
+ * Return: None
+ * */
+static void obd_can_gpio_init(void) {
+	__OBD_CAN_GPIO_CLK_EN();
+	GPIO_InitTypeDef init = {0};
+
+	init.Alternate = GPIO_AF9_CAN1;
+	init.Mode = GPIO_MODE_AF_PP;
+	init.Pull = GPIO_NOPULL;
+	init.Speed = GPIO_SPEED_FAST;
+
+	init.Pin = OBD_CAN_TX_PIN;
+
+	HAL_GPIO_Init(OBD_CAN_TX_PORT, &init);
+
+	init.Pin = OBD_CAN_RX_PIN;
+
+	HAL_GPIO_Init(OBD_CAN_RX_PORT, &init);
+}
+
+/**
  * Initialise CAN peripheral for OBD use
  *
  * Return: None
  * */
 static void obd_can_init(void) {
+	__OBD_CAN_CLK_EN();
+
 	canFilt.FilterActivation = CAN_FILTER_ENABLE;
 	canFilt.FilterFIFOAssignment = OBD_CAN_FILTER_FIFO;
 	canFilt.FilterMode = CAN_FILTERMODE_IDMASK;
@@ -59,6 +84,16 @@ static void obd_can_init(void) {
 	// initialise CAN peripheral
 	HAL_CAN_Init(&canBus);
 	HAL_CAN_Start(&canBus);
+}
+
+/**
+ * Initialise hardware required for OBD CAN
+ *
+ * Return: None
+ * */
+void obd_can_hardware_init(void) {
+	obd_can_gpio_init();
+	obd_can_init();
 }
 
 /**
