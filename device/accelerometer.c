@@ -29,6 +29,9 @@ static I2C_HandleTypeDef accBus;
 static void accelerometer_init_gpio(void) {
 	GPIO_InitTypeDef init = {0};
 
+	__ACC_I2C_SDA_PORT_CLK_EN();
+	__ACC_I2C_SCL_PORT_CLK_EN();
+
 	init.Alternate = GPIO_AF4_I2C4;
 	init.Mode = GPIO_MODE_AF_OD;
 	init.Speed = GPIO_SPEED_HIGH;
@@ -49,6 +52,8 @@ static void accelerometer_init_gpio(void) {
  * Return: None
  * */
 static void accelerometer_init_i2c(void) {
+	ACC_I2C_INSTANCE_CLK_EN();
+
 	accBus.Instance = ACC_I2C_INSTANCE;
 	accBus.Init.Timing = ACC_I2C_INSTANCE_TIMING;
 	accBus.Init.OwnAddress1 = 0;

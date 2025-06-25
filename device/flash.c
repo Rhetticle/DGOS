@@ -66,7 +66,7 @@ static void flash_init_gpio(void) {
  * */
 static void flash_init_qspi(void) {
 	__FLASH_QSPI_INSTANCE_CLK_EN();
-	// initialise GPIO pins for QSPI
+	// initialise QSPI peripheral
 	qspiFlash.Instance = FLASH_QSPI_INSTANCE;
 	qspiFlash.Init.ChipSelectHighTime = QSPI_CS_HIGH_TIME_1_CYCLE;
 	qspiFlash.Init.ClockMode = QSPI_CLOCK_MODE_0;
