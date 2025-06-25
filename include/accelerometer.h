@@ -15,6 +15,7 @@
 
 
 #include <device.h>
+#include <stm32f7xx.h>
 #include <stdbool.h>
 
 #ifdef ACC_USE_FREERTOS
@@ -24,7 +25,14 @@ extern QueueHandle_t queueAccelerometerData;
 extern QueueHandle_t queueAccelerometerConf;
 #endif
 
+#define ACC_I2C_SDA_PORT GPIOD
+#define ACC_I2C_SDA_PIN GPIO_PIN_13
+#define ACC_I2C_SCL_PORT GPIOD
+#define ACC_I2C_SCL_PIN GPIO_PIN_12
+
 #define ACC_I2C_INSTANCE I2C4
+#define ACC_I2C_INSTANCE_CLK_EN __HAL_RCC_I2C4_CLK_ENABLE()
+#define ACC_I2C_INSTANCE_TIMING 0x00303D5B
 
 #define ACC_I2C_ADDR 0b0011000
 

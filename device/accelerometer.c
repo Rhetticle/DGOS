@@ -22,6 +22,56 @@ static TaskHandle_t taskHandleAccelerometer;
 static I2C_HandleTypeDef accBus;
 
 /**
+ * Initialise GPIO pins for acceleromter use
+ *
+ * Return: None
+ * */
+static void accelerometer_init_gpio(void) {
+	GPIO_InitTypeDef init = {0};
+
+	init.Alternate = GPIO_AF4_I2C4;
+	init.Mode = GPIO_MODE_AF_OD;
+	init.Speed = GPIO_SPEED_HIGH;
+	init.Pull = GPIO_NOPULL;
+
+	init.Pin = ACC_I2C_SDA_PIN;
+
+	HAL_GPIO_Init(ACC_I2C_SDA_PORT, &init);
+
+	init.Pin = ACC_I2C_SCL_PIN;
+
+	HAL_GPIO_Init(ACC_I2C_SCL_PORT, &init);
+}
+
+/**
+ * Initialise I2C peripheral for accelerometer
+ *
+ * Return: None
+ * */
+static void accelerometer_init_i2c(void) {
+	accBus.Instance = ACC_I2C_INSTANCE;
+	accBus.Init.Timing = ACC_I2C_INSTANCE_TIMING;
+	accBus.Init.OwnAddress1 = 0;
+	accBus.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+	accBus.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+	accBus.Init.OwnAddress2 = 0;
+	accBus.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+	accBus.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+	accBus.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+	HAL_I2C_Init(&accBus);
+}
+
+/**
+ * Initialise acceleromter hardware
+ *
+ * Return: None
+ * */
+static void accelerometer_hardware_init(void) {
+	accelerometer_init_gpio();
+	accelerometer_init_i2c();
+}
+
+/**
  * Get task handle of accelerometer task
  *
  * Return: Task handle of accelerometer task
@@ -37,24 +87,6 @@ TaskHandle_t task_get_handle_accelerometer(void) {
  * */
 AccelConfig* accelerometer_get_config(void) {
 	return &conf;
-}
-
-/**
- * Initialise I2C peripheral for accelerometer
- *
- * Return: None
- * */
-static void accelerometer_init_i2c(void) {
-	accBus.Instance = ACC_I2C_INSTANCE;
-	accBus.Init.Timing = 0x00303D5B;
-	accBus.Init.OwnAddress1 = 0;
-	accBus.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-	accBus.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-	accBus.Init.OwnAddress2 = 0;
-	accBus.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
-	accBus.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-	accBus.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-	HAL_I2C_Init(&accBus);
 }
 
 /**
@@ -230,6 +262,7 @@ DeviceStatus accelerometer_set_resolution(bool highRes) {
  * Return: status indicating success or failure
  * */
 DeviceStatus accelerometer_init(uint8_t sampleRate, uint8_t range, bool highRes) {
+	accelerometer_hardware_init();
 	DeviceStatus status;
 	uint8_t ctr1Data = sampleRate | (1 << XEN) | (1 << YEN) | (1 << ZEN);
 	uint8_t ctr4Data = range;
