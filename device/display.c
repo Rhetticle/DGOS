@@ -15,11 +15,46 @@
 static SPI_HandleTypeDef lcdBus;
 
 /**
+ * Initialise GPIO pins for SPI use for display
+ *
+ * Return: None
+ * */
+static void display_gpio_init(void) {
+	GPIO_InitTypeDef init = {0};
+
+	__LCD_GPIO_CLK_EN();
+
+	init.Alternate = GPIO_AF5_SPI1;
+	init.Speed = GPIO_SPEED_FAST;
+	init.Mode = GPIO_MODE_AF_PP;
+	init.Pull = GPIO_NOPULL;
+
+	init.Pin = LCD_SPI_CLK_PIN;
+
+	HAL_GPIO_Init(LCD_SPI_CLK_PORT, &init);
+
+	init.Pin = LCD_SPI_MOSI_PIN;
+
+	HAL_GPIO_Init(LCD_SPI_MOSI_PORT, &init);
+
+	init.Pin = LCD_CS_PIN;
+	init.Mode = MODE_OUTPUT;
+
+	HAL_GPIO_Init(LCD_CS_PORT, &init);
+
+	init.Pin = LCD_NRST_PIN;
+
+	HAL_GPIO_Init(LCD_NRST_PORT, &init);
+}
+
+/**
  * Initialise SPI bus for LCD commands
  *
  * Return: None
  * */
 static void display_spi_init(void) {
+	// enable all clocks required for SPI
+	__LCD_SPI_CLK_EN();
 	lcdBus.Instance = LCD_SPI_INSTANCE;
 	lcdBus.Init.Mode = SPI_MODE_MASTER;
 	lcdBus.Init.Direction = SPI_DIRECTION_1LINE;
@@ -35,6 +70,16 @@ static void display_spi_init(void) {
 	lcdBus.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
 	lcdBus.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
 	HAL_SPI_Init(&lcdBus);
+}
+
+/**
+ * Initialise hardware for display
+ *
+ * Return: None
+ * */
+void display_hardware_init(void) {
+	display_gpio_init();
+	display_spi_init();
 }
 
 /**
@@ -91,6 +136,7 @@ void sendData(uint8_t data) {
  * Return: None
  * */
 void display_init(void) {
+	display_hardware_init();
 	LCD_NRST_HIGH();
 	LCD_CS_HIGH();
 	display_reset();

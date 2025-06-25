@@ -11,16 +11,33 @@
 #include <stm32f7xx.h>
 
 #define LCD_SPI_INSTANCE SPI1
+// LCD SPI pin definitions
+#define LCD_SPI_CLK_PORT GPIOB
+#define __LCD_SPI_CLK_PORT_CLK_EN() __HAL_RCC_GPIOB_CLK_ENABLE()
+#define LCD_SPI_CLK_PIN GPIO_PIN_3
+
+#define LCD_SPI_MOSI_PORT GPIOB
+#define __LCD_SPI_CLK_PORT_CLK_EN() __HAL_RCC_GPIOB_CLK_ENABLE()
+#define LCD_SPI_MOSI_PIN GPIO_PIN_5
 
 #ifndef LCD_CS_PIN
 #define LCD_CS_PIN GPIO_PIN_4
 #define LCD_CS_PORT GPIOB
+#define __LCD_CS_PORT_CLK_EN() __HAL_RCC_GPIOB_CLK_ENABLE()
 #endif
 
 #ifndef LCD_NRST_PIN
 #define LCD_NRST_PIN GPIO_PIN_7
 #define LCD_NRST_PORT GPIOB
+#define __LCD_NRST_PORT_CLK_EN() __HAL_RCC_GPIOB_CLK_ENABLE()
 #endif
+
+#define __LCD_SPI_CLK_EN() __HAL_RCC_SPI1_CLK_ENABLE();
+
+#define __LCD_GPIO_CLK_EN() {__LCD_SPI_CLK_PORT_CLK_EN();\
+								 __LCD_SPI_CLK_PORT_CLK_EN();\
+								 __LCD_CS_PORT_CLK_EN();\
+								 __LCD_NRST_PORT_CLK_EN();}
 
 #define LCD_RESOLUTION_X 480
 #define LCD_RESOLUTION_Y 480
