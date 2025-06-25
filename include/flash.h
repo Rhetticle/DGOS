@@ -8,10 +8,28 @@
 #ifndef DGOS_INCLUDE_FLASH_H_
 #define DGOS_INCLUDE_FLASH_H_
 
-#include <dgas_types.h>
+#if 1 // set to 1 if wish to use FreeRTOS with this driver
+#define FLASH_USE_FREERTOS
+#endif
 
+#include <device.h>
+#include <stm32f7xx.h>
+#include <stdbool.h>
+
+#ifdef FLASH_USE_FREERTOS
+#include <FreeRTOS.h>
+#include <queue.h>
+#endif /* FLASH_USE_FREERTOS */
+
+#ifdef FLASH_USE_FREERTOS
 extern QueueHandle_t queueFlashWrite;
 extern QueueHandle_t queueFlashRead;
+#endif /* FLASH_USE_FREERTOS */
+
+typedef struct{
+	uint8_t data[64];
+	uint32_t id;
+}FlashChunk;
 
 // Pin and ports for QSPI
 #define FLASH_QSPI_NCS_PORT      GPIOB
@@ -56,8 +74,94 @@ extern QueueHandle_t queueFlashRead;
 #else
 #define FLASH_QSPI_INSTANCE DGAS_CONFIG_FLASH_QSPI_INSTANCE
 #define __FLASH_QSPI_INSTANCE_CLK_EN() DGAS_CONFIG_FLASH_QSPI_INSTANCE_CLK_EN()
-#endif
+#endif /* DGAS_CONFIG_FLASH_QSPI_INSTANCE */
 
+#define FLASH_COMMAND_TIMEOUT 100 // 100ms timeout on commands
+
+/******************************** FLASH MEMORY INSTRUCTION OPCODES ***********************************/
+
+// Write and program related instructions
+
+#define FLASH_WRITE_ENABLE 								0x06
+#define FLASH_WRITE_ENABLE_VOLATILE 					0x50
+#define FLASH_WRITE_DISABLE 							0x04
+#define FLASH_WRITE_STAT_REG_ONE 						0x01
+#define FLASH_WRITE_STAT_REG_TWE 						0x31
+#define FLASH_WRITE_STAT_REG_THREE 						0x11
+#define FLASH_WRITE_EXT_ADDR 							0xC5
+#define FLASH_PAGE_PROGRAM 							 	0x02
+#define FLASH_PAGE_PROGRAM_FOUR_BYTE_ADDR 			 	0x12
+#define FLASH_QUAD_INPUT_PAGE_PROGRAM 				 	0x32
+#define FLASH_QUAD_INPUT_PAGE_PROGRAM_FOUR_BYTE_ADDR 	0x34
+
+// Read related instructions
+#define FLASH_READ_STAT_REG_ONE 						0x05
+#define FLASH_READ_STAT_REG_TWO 						0x35
+#define FLASH_READ_STAT_REG_THREE 						0x15
+#define FLASH_READ_EXT_ADDR 							0xC8
+#define FLASH_READ 										0x03
+#define FLASH_READ_FOUR_BYTE_ADDR 						0x13
+#define FLASH_READ_FAST 								0x0B
+#define FLASH_READ_FAST_FOUR_BYTE_ADDR 					0x0C
+#define FLASH_READ_FAST_DUAL_OUTPUT 					0x3B
+#define FLASH_READ_FAST_DUAL_OUTPUT_FOUR_BYTE_ADDR   	0x3C
+#define FLASH_READ_FAST_QUAD_OUTPUT 				 	0x6B
+#define FLASH_READ_FAST_QUAD_OUTPUT_FOUR_BYTE_ADDR   	0x6C
+#define FLASH_READ_FAST_DUAL_IO 					 	0xBB
+#define FLASH_READ_FAST_DUAL_IO_FOUR_BYTE_ADDR 		 	0xBC
+#define FLASH_READ_QUAD_IO 							 	0xEB
+#define FLASH_READ_QUAD_IO_FOUR_BYTE_ADDR 			 	0xEC
+
+// erase related instructions
+#define FLASH_SECTOR_ERASE 							 	0x20
+#define FLASH_SECTOR_ERASE_FOUR_BYTE_ADDR 			 	0x21
+#define FLASH_BLOCK_ERASE_32K 						 	0x52
+#define FLASH_BLOCK_ERASE_64K 						 	0xD8
+#define FLASH_BLOCK_ERASE_64K_FOUR_BYTE_ADDR 		 	0xDC
+#define FLASH_CHIP_ERASE 								0xC7 // can also use 0x60
+#define FLASH_SUSPEND 									0x75
+#define FLASH_RESUME 									0x7A
+
+// ID related instructions
+#define FLASH_DEVICE_ID 								0xAB
+#define FLASH_MFR_ID 									0x90
+#define FLASH_MFR_ID_DUAL_OUTPUT 						0x92
+#define FLASH_MFS_ID_QUAD_OUTPUT 						0x94
+#define FLASH_UNIQUE_ID 								0x4B
+#define FLASH_JEDEC_ID 									0x9F
+
+// security related instructions
+#define FLASH_READ_SFDP 								0x5A
+#define FLASH_ERASE_SECURITY 							0x44
+#define FLASH_PROGRAM_SECURITY 							0x42
+#define FLASH_READ_SECURITY 							0x48
+#define FLASH_INDIVIDUAL_BLOCK_LOCK 					0x36
+#define FLASH_INDIVIDUAL_BLOCK_UNLOCK 					0x39
+#define FLASH_READ_BLOCK_LOCK 							0x3D
+#define FLASH_GLOBAL_BLOCK_LOCK 						0x7E
+#define FLASH_GLOBAL_BLOCK_UNLOCK 						0x98
+
+// reset instructions
+#define FLASH_ENABLE_RESET 								0x98
+#define FLASH_RESET 									0x99
+
+// miscellaneous instructions
+#define FLASH_ENTER_FOUR_BYTE_ADDR_MODE 				0xB7
+#define FLASH_EXIT_FOUR_BYTE_ADDR_MODE 					0xE9
+#define FLASH_SET_BURST_WITH_WRAP 					 	0x77
+#define FLASH_POWER_DOWN 								0xB9
+
+/*********************** FLASH REGISTER BIT POSITIONS *****************************/
+
+// Status register one
+#define BUSY 	1 << 0
+#define WEL  	1 << 1
+#define BP0  	1 << 2
+#define BP1  	1 << 3
+#define BP2		1 << 4
+#define BP3		1 << 5
+#define TB		1 << 6
+#define SRP		1 << 7
 
 #ifndef DGAS_CONFIG_FLASH_CHUNK_SIZE
 #define FLASH_CHUNK_SIZE 64
@@ -65,18 +169,30 @@ extern QueueHandle_t queueFlashRead;
 #define FLASH_CHUNK_SIZE DGAS_CONFIG_CHUNK_SIZE
 #endif /* DGAS_CONFIG_FLASH_CHUNK_SIZE */
 
-
-
-typedef struct{
-	uint8_t data[64];
-	uint32_t id;
-}FlashChunk;
-
+#ifdef FLASH_USE_FREERTOS
 #define FLASH_WRITE_QUEUE_LENGTH 10
 #define FLASH_READ_QUEUE_LENGTH  10
 
 #define DGAS_TASK_FLASH_PRIORITY (tskIDLE_PRIORITY + 1)
 #define DGAS_TASK_FLASH_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
+#endif /* FLASH_USE_FREERTOS */
 
+/****************** Function Prototypes ************************/
+void flash_init_hardware(void);
+DeviceStatus flash_command(QSPI_CommandTypeDef* cmd);
+DeviceStatus flash_receive(uint8_t* dest, uint32_t timeout);
+DeviceStatus flash_read_reg(uint8_t regInstr, uint8_t* dest, uint32_t timeout);
+DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, bool set, uint32_t timeout);
+DeviceStatus flash_read(uint8_t* dest, uint32_t size, uint32_t addr);
+DeviceStatus flash_write_enable(void);
+DeviceStatus flash_write(uint8_t* data, uint32_t size, uint32_t addr);
+DeviceStatus flash_erase_chip(void);
+DeviceStatus flash_write_chunk(FlashChunk* chunk);
+DeviceStatus flash_read_chunk(FlashChunk* dest);
+
+#ifdef FLASH_USE_FREERTOS
+void task_init_flash(void);
+TaskHandle_t task_flash_get_handle(void);
+#endif /* FLASH_USE_FREERTOS */
 
 #endif /* DGOS_INCLUDE_FLASH_H_ */
