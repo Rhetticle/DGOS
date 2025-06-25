@@ -29,6 +29,7 @@ TaskHandle_t task_dgas_sys_get_handle(void) {
  * */
 void task_dgas_sys(void) {
 	// TODO: Setup flash controller and read gauge setting configuration
+
 	// initialise UI task
 	task_dgas_ui_init();
 	// initialise OBD task

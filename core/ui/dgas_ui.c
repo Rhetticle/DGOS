@@ -368,7 +368,7 @@ void ui_init_lvgl(void) {
 #else
 	lv_display_set_buffers(display, (void*) UI_FRAME_BUFF_ONE_ADDR, (void*) NULL,
 							UI_FRAME_BUFF_SIZE, LV_DISP_RENDER_MODE_DIRECT);
-#endif
+#endif /* DGAS_CONFIG_USE_DOUBLE_BUFFERING */
 	lv_display_set_flush_cb(display, ui_flush_frame_buffer);
 	// create input device and set type and read callback function
 	indevEnc = lv_indev_create();
