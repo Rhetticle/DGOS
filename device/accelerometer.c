@@ -10,14 +10,16 @@
 #include <stdbool.h>
 #include <i2c.h>
 
+#ifdef ACC_USE_FREERTOS
 // Queue for sending accelerometer values
 QueueHandle_t queueAccelerometerData;
 // Queue for configuring accelerometer
 QueueHandle_t queueAccelerometerConf;
-// stores configuration of accelerometer
-static AccelConfig conf;
 // stores task handle for controller task
 static TaskHandle_t taskHandleAccelerometer;
+#endif /* ACC_USE_FREERTOS */
+// stores configuration of accelerometer
+static AccelConfig conf;
 // stores I2C bus being used with accelerometer
 static I2C_HandleTypeDef accBus;
 
@@ -72,8 +74,14 @@ static void accelerometer_init_i2c(void) {
  * Return: None
  * */
 static void accelerometer_hardware_init(void) {
+#ifdef ACC_USE_FREERTOS
+	taskENTER_CRITICAL();
+#endif /* ACC_USE_FREERTOS */
 	accelerometer_init_gpio();
 	accelerometer_init_i2c();
+#ifdef ACC_USE_FREERTOS
+	taskEXIT_CRITICAL();
+#endif /* ACC_USE_FREERTOS */
 }
 
 /**
@@ -106,6 +114,7 @@ AccelConfig* accelerometer_get_config(void) {
 DeviceStatus accelerometer_write(uint8_t* data, uint32_t size, uint32_t reg) {
 	HAL_StatusTypeDef status;
 
+#ifdef ACC_USE_FREERTOS
 	taskENTER_CRITICAL();
 	if ((status = HAL_I2C_Mem_Write(&accBus, ACC_I2C_ADDR, reg, sizeof(uint8_t),
 			data, size, 10)) != HAL_OK) {
@@ -118,6 +127,17 @@ DeviceStatus accelerometer_write(uint8_t* data, uint32_t size, uint32_t reg) {
 	}
 	taskEXIT_CRITICAL();
 	return DEV_OK;
+#else
+	if ((status = HAL_I2C_Mem_Write(&accBus, ACC_I2C_ADDR, reg, sizeof(uint8_t),
+			data, size, 10)) != HAL_OK) {
+		if (status == HAL_TIMEOUT) {
+			return DEV_TIMEOUT;
+		} else {
+			return DEV_WRITE_ERROR;
+		}
+	}
+	return DEV_OK;
+#endif /* ACC_USE_FREERTOS */
 }
 
 /**
@@ -132,6 +152,7 @@ DeviceStatus accelerometer_write(uint8_t* data, uint32_t size, uint32_t reg) {
 DeviceStatus accelerometer_read(uint8_t* dest, uint32_t size, uint32_t reg, uint32_t timeout) {
 	HAL_StatusTypeDef status;
 
+#ifdef ACC_USE_FREERTOS
 	taskENTER_CRITICAL();
 	if ((status = HAL_I2C_Mem_Read(&accBus, ACC_I2C_ADDR, reg, sizeof(uint8_t),
 			dest, size, timeout)) != HAL_OK) {
@@ -143,6 +164,16 @@ DeviceStatus accelerometer_read(uint8_t* dest, uint32_t size, uint32_t reg, uint
 		}
 	}
 	taskEXIT_CRITICAL();
+#else
+	if ((status = HAL_I2C_Mem_Read(&accBus, ACC_I2C_ADDR, reg, sizeof(uint8_t),
+			dest, size, timeout)) != HAL_OK) {
+		if (status == HAL_TIMEOUT) {
+			return DEV_TIMEOUT;
+		} else {
+			return DEV_WRITE_ERROR;
+		}
+	}
+#endif /* ACC_USE_FREERTOS */
 	return DEV_OK;
 }
 
@@ -400,6 +431,7 @@ DeviceStatus accelerometer_configure(AccelConfig* config) {
 	return DEV_OK;
 }
 
+#ifdef ACC_USE_FREERTOS
 /**
  * Accelerometer control task thread function
  *
@@ -445,5 +477,5 @@ void task_init_accelerometer(void) {
 			TASK_ACCELEROMETER_STACK_SIZE, NULL, TASK_ACCELEROMETER_STACK_SIZE,
 		&taskHandleAccelerometer);
 }
-
+#endif /* ACC_USE_FREERTOS */
 
