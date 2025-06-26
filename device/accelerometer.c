@@ -84,6 +84,7 @@ static void accelerometer_hardware_init(void) {
 #endif /* ACC_USE_FREERTOS */
 }
 
+#ifdef ACC_USE_FREERTOS
 /**
  * Get task handle of accelerometer task
  *
@@ -92,6 +93,7 @@ static void accelerometer_hardware_init(void) {
 TaskHandle_t task_get_handle_accelerometer(void) {
 	return taskHandleAccelerometer;
 }
+#endif /* ACC_USE_FREERTOS */
 
 /**
  * Get current configuration of accelerometer
@@ -437,7 +439,7 @@ DeviceStatus accelerometer_configure(AccelConfig* config) {
  *
  * Return: None
  * */
-void task_accelerometer(void) {
+static void task_accelerometer(void) {
 	AccelData accData = {0};
 	AccelConfig config = {0};
 

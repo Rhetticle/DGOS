@@ -89,8 +89,14 @@ static void flash_init_qspi(void) {
  * Return: None
  * */
 void flash_init_hardware(void) {
+#ifdef FLASH_USE_FREERTOS
+	taskENTER_CRITICAL();
+#endif /* FLASH_USE_FREERTOS */
 	flash_init_gpio();
 	flash_init_qspi();
+#ifdef FLASH_USE_FREERTOS
+	taskEXIT_CRITICAL();
+#endif /* FLASH_USE_FREERTOS */
 }
 
 #ifdef FLASH_USE_FREERTOS
@@ -209,7 +215,7 @@ DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, bool set, uint32_
 	uint32_t tickStart = HAL_GetTick();
 
 	if (set) {
-		// loop until bit is set or until we timeout
+		// loop until bit is set or until we timeout or read fails
 		while(!(regVal & bit)) {
 			if ((status = flash_read_reg(regInstr, &regVal, timeout)) != DEV_OK) {
 				return status;
@@ -219,7 +225,7 @@ DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, bool set, uint32_
 			}
 		}
 	} else {
-		// loop until bit is cleared or until we timeout
+		// loop until bit is cleared or until we timeout or read fails
 		while(regVal & bit) {
 			if ((status = flash_read_reg(regInstr, &regVal, timeout)) != DEV_OK) {
 				return status;
