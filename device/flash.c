@@ -45,6 +45,7 @@ static void flash_init_gpio(void) {
 
 	HAL_GPIO_Init(FLASH_QSPI_CLK_PORT, &init);
 
+	// initialise QSPI IO pins
 	init.Pin = FLASH_QSPI_IO_ZERO_PIN;
 
 	HAL_GPIO_Init(FLASH_QSPI_IO_ZERO_PORT, &init);

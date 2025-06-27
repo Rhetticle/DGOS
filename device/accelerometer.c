@@ -118,7 +118,7 @@ DeviceStatus accelerometer_write(uint8_t* data, uint32_t size, uint32_t reg) {
 
 #ifdef ACC_USE_FREERTOS
 	taskENTER_CRITICAL();
-	if ((status = HAL_I2C_Mem_Write(&accBus, ACC_I2C_ADDR, reg, sizeof(uint8_t),
+	if ((status = HAL_I2C_Mem_Write(&accBus, ACC_I2C_ADDR << 1, reg, sizeof(uint8_t),
 			data, size, 10)) != HAL_OK) {
 		taskEXIT_CRITICAL();
 		if (status == HAL_TIMEOUT) {
@@ -130,7 +130,7 @@ DeviceStatus accelerometer_write(uint8_t* data, uint32_t size, uint32_t reg) {
 	taskEXIT_CRITICAL();
 	return DEV_OK;
 #else
-	if ((status = HAL_I2C_Mem_Write(&accBus, ACC_I2C_ADDR, reg, sizeof(uint8_t),
+	if ((status = HAL_I2C_Mem_Write(&accBus, ACC_I2C_ADDR << 1, reg, sizeof(uint8_t),
 			data, size, 10)) != HAL_OK) {
 		if (status == HAL_TIMEOUT) {
 			return DEV_TIMEOUT;
@@ -156,7 +156,7 @@ DeviceStatus accelerometer_read(uint8_t* dest, uint32_t size, uint32_t reg, uint
 
 #ifdef ACC_USE_FREERTOS
 	taskENTER_CRITICAL();
-	if ((status = HAL_I2C_Mem_Read(&accBus, ACC_I2C_ADDR, reg, sizeof(uint8_t),
+	if ((status = HAL_I2C_Mem_Read(&accBus, ACC_I2C_ADDR << 1, reg, sizeof(uint8_t),
 			dest, size, timeout)) != HAL_OK) {
 		taskEXIT_CRITICAL();
 		if (status == HAL_TIMEOUT) {
@@ -167,7 +167,7 @@ DeviceStatus accelerometer_read(uint8_t* dest, uint32_t size, uint32_t reg, uint
 	}
 	taskEXIT_CRITICAL();
 #else
-	if ((status = HAL_I2C_Mem_Read(&accBus, ACC_I2C_ADDR, reg, sizeof(uint8_t),
+	if ((status = HAL_I2C_Mem_Read(&accBus, ACC_I2C_ADDR << 1, reg, sizeof(uint8_t),
 			dest, size, timeout)) != HAL_OK) {
 		if (status == HAL_TIMEOUT) {
 			return DEV_TIMEOUT;
@@ -336,7 +336,7 @@ DeviceStatus accelerometer_init(uint8_t sampleRate, uint8_t range, bool highRes)
 static void accelerometer_conv_raw_to_acc(uint8_t* raw, float* acc) {
 	float convRate = accelerometer_determine_conv_rate();
 	uint8_t offset;
-	uint16_t xRaw, yRaw, zRaw;
+	int16_t xRaw, yRaw, zRaw;
 
 	if (conf.highRes) {
 		offset = ACC_VALUE_OFFSET_HIGH_RES;
@@ -344,9 +344,9 @@ static void accelerometer_conv_raw_to_acc(uint8_t* raw, float* acc) {
 		offset = ACC_VALUE_OFFSET_NORMAL;
 	}
 
-	xRaw = (((uint16_t) raw[1] << 8) | raw[0]);
-	yRaw = (((uint16_t) raw[3] << 8) | raw[2]);
-	zRaw = (((uint16_t) raw[5] << 8) | raw[4]);
+	xRaw = (((int16_t) raw[1] << 8) | raw[0]);
+	yRaw = (((int16_t) raw[3] << 8) | raw[2]);
+	zRaw = (((int16_t) raw[5] << 8) | raw[4]);
 
 	xRaw >>= offset;
 	yRaw >>= offset;
@@ -366,7 +366,7 @@ static void accelerometer_conv_raw_to_acc(uint8_t* raw, float* acc) {
  * */
 DeviceStatus accelerometer_get_update(AccelData* data) {
 	DeviceStatus status;
-	uint8_t accRaw[ACC_BYTES_NO * ACC_AXIS_COUNT];
+	uint8_t accRaw[ACC_BYTES_NO];
 	float accData[ACC_AXIS_COUNT];
 
 	for (int i = 0; i < ACC_BYTES_NO; i++) {
@@ -446,7 +446,10 @@ static void task_accelerometer(void) {
 
 	queueAccelerometerData = xQueueCreate(1, sizeof(AccelData));
 	queueAccelerometerConf = xQueueCreate(1, sizeof(AccelConfig));
-	accelerometer_init(ACC_SAMPLE_400HZ, ACC_RANGE_2G, true);
+	// initialise accelerometer with 400Hz sample rate, 2G range and high resolution mode
+	if (accelerometer_init(ACC_SAMPLE_400HZ, ACC_RANGE_2G, true) != DEV_OK) {
+		// do something
+	}
 
 	for(;;) {
 		if (accelerometer_get_update(&accData) != DEV_OK) {

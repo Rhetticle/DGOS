@@ -9,6 +9,7 @@
 #include <dgas_sys.h>
 #include <dgas_obd.h>
 #include <dgas_ui.h>
+#include <accelerometer.h>
 
 // Task handle of DGAS system task
 static TaskHandle_t taskHandleSys;
@@ -28,15 +29,14 @@ TaskHandle_t task_dgas_sys_get_handle(void) {
  * Return: None
  * */
 void task_dgas_sys(void) {
-	// TODO: Setup flash controller and read gauge setting configuration
-
-	// initialise UI task
-	task_dgas_ui_init();
-	// initialise OBD task
-	task_dgas_obd_init();
+	AccelData data;
+	uint32_t count = 0;
 
 	for (;;) {
-
+		if (xQueueReceive(queueAccelerometerData, &data, 10) == pdTRUE) {
+			count++;
+		}
+		vTaskDelay(20);
 	}
 }
 
