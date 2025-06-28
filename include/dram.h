@@ -91,5 +91,6 @@ void dram_init(void);
 void dram_fill_section(uint32_t startAddr, uint32_t endAddr, uint8_t value);
 void dram_clear_section(uint32_t startAddr, uint32_t endAddr);
 void dram_clear(void);
+void dram_read_section(uint32_t startAddr, uint8_t* dest, uint32_t size);
 
 #endif /* DGOS_INCLUDE_DRAM_H_ */

@@ -8,21 +8,24 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <display.h>
+#include <dram.h>
 #include <spi.h>
 
 // SPI bus used to send data/commands to display
 // Note that the actual pixel data is sent using RGB16 bus
 static SPI_HandleTypeDef lcdBus;
+// LTDC handle for LTDC peripheral being used with display
+static LTDC_HandleTypeDef lcdLTDC;
 
 /**
  * Initialise GPIO pins for SPI use for display
  *
  * Return: None
  * */
-static void display_gpio_init(void) {
+static void display_spi_gpio_init(void) {
 	GPIO_InitTypeDef init = {0};
 
-	__LCD_GPIO_CLK_EN();
+	__LCD_SPI_GPIO_CLK_EN();
 
 	init.Alternate = GPIO_AF5_SPI1;
 	init.Speed = GPIO_SPEED_FAST;
@@ -73,13 +76,126 @@ static void display_spi_init(void) {
 }
 
 /**
+ * Initialise GPIO pins for LTDC peripheral
+ *
+ * Return: None
+ * */
+static void display_ltdc_gpio_init(void) {
+	__LCD_LTDC_GPIO_CLK_EN_ALL();
+	// ports A, B, C, D, F and G are being used
+	// check header to see which pins share same port
+
+	GPIO_InitTypeDef init = {0};
+
+	// check datasheet to see which AF to use
+	init.Alternate = GPIO_AF14_LTDC;
+	init.Mode = GPIO_MODE_AF_PP;
+	init.Pull = GPIO_NOPULL;
+	init.Speed = GPIO_SPEED_HIGH;
+
+	// port A
+	init.Pin = LCD_LTDC_PIN_R2 | LCD_LTDC_PIN_R4 |
+			   LCD_LTDC_PIN_G2 | LCD_LTDC_PIN_B5 |
+			   LCD_LTDC_PIN_VSYNC;
+
+	HAL_GPIO_Init(GPIOA, &init);
+
+	// port B
+	init.Pin = LCD_LTDC_PIN_R3 | LCD_LTDC_PIN_R6 |
+			   LCD_LTDC_PIN_G4 | LCD_LTDC_PIN_G5 |
+			   LCD_LTDC_PIN_B6 | LCD_LTDC_PIN_B7;
+
+	HAL_GPIO_Init(GPIOB, &init);
+
+	// port C
+	init.Pin = LCD_LTDC_PIN_R5 | LCD_LTDC_PIN_G6 |
+			   LCD_LTDC_PIN_HSYNC;
+
+	HAL_GPIO_Init(GPIOC, &init);
+
+	// port D
+	init.Pin = LCD_LTDC_PIN_G7 | LCD_LTDC_PIN_B2;
+
+	HAL_GPIO_Init(GPIOD, &init);
+
+	// port F
+	init.Pin = LCD_LTDC_PIN_DE;
+
+	HAL_GPIO_Init(GPIOF, &init);
+
+	// port G
+	init.Pin = LCD_LTDC_PIN_R7 | LCD_LTDC_PIN_G3 |
+			   LCD_LTDC_PIN_B3 | LCD_LTDC_PIN_B4 |
+			   LCD_LTDC_PIN_CLK;
+
+	HAL_GPIO_Init(GPIOG, &init);
+}
+
+/**
+ * Initialise LTDC peripheral for use with display
+ *
+ * Return: None
+ * */
+void display_ltdc_init(void) {
+	__LCD_LTDC_CLK_EN();
+	// struct to configure LTDC layers (Only one is being used)
+	LTDC_LayerCfgTypeDef config = {0};
+
+	lcdLTDC.Instance = LCD_LTDC_INSTANCE;
+
+	lcdLTDC.Init.AccumulatedActiveH = LCD_LTDC_ACTIVE_HEIGHT;
+	lcdLTDC.Init.AccumulatedActiveW = LCD_LTDC_ACTIVE_WIDTH;
+	lcdLTDC.Init.AccumulatedHBP = LCD_LTDC_ACCUMULATED_HBP;
+	lcdLTDC.Init.AccumulatedVBP = LCD_LTDC_ACCUMULATED_VBP;
+	// set background colour to black
+	lcdLTDC.Init.Backcolor.Blue = 0;
+	lcdLTDC.Init.Backcolor.Red = 0;
+	lcdLTDC.Init.Backcolor.Green = 0;
+	lcdLTDC.Init.Backcolor.Reserved = 0;
+
+	lcdLTDC.Init.DEPolarity = LTDC_DEPOLARITY_AL;
+	lcdLTDC.Init.HSPolarity = LTDC_HSPOLARITY_AL;
+	lcdLTDC.Init.HorizontalSync = LCD_LTDC_HSYNC_INTERVAL;
+	lcdLTDC.Init.PCPolarity = LTDC_PCPOLARITY_IPC;
+	lcdLTDC.Init.TotalHeigh = LCD_LTDC_TOTAL_HEIGHT;
+	lcdLTDC.Init.TotalWidth = LCD_LTDC_TOTAL_WIDTH;
+	lcdLTDC.Init.VSPolarity = LTDC_VSPOLARITY_AL;
+	lcdLTDC.Init.VerticalSync = LCD_LTDC_VSYNC_INTERVAL;
+
+	HAL_LTDC_Init(&lcdLTDC);
+
+	config.Alpha = LCD_LTDC_LAYER_ALPHA;
+	config.Alpha0 = LCD_LTDC_LAYER_ALPHA_0;
+	// set background colour to black
+	config.Backcolor.Blue = 0;
+	config.Backcolor.Red = 0;
+	config.Backcolor.Green = 0;
+	config.Backcolor.Reserved = 0;
+
+	config.BlendingFactor1 = LTDC_BLENDING_FACTOR1_CA;
+	config.BlendingFactor2 = LTDC_BLENDING_FACTOR2_CA;
+	config.FBStartAdress = DRAM_START_ADDR;
+	config.ImageHeight = LCD_RESOLUTION_Y;
+	config.ImageWidth = LCD_RESOLUTION_X;
+	config.PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
+	config.WindowX0 = 0;
+	config.WindowX1 = LCD_RESOLUTION_X;
+	config.WindowY0 = 0;
+	config.WindowY1 = LCD_RESOLUTION_Y;
+
+	HAL_LTDC_ConfigLayer(&lcdLTDC, &config, 0);
+}
+
+/**
  * Initialise hardware for display
  *
  * Return: None
  * */
 void display_hardware_init(void) {
-	display_gpio_init();
+	display_spi_gpio_init();
 	display_spi_init();
+	display_ltdc_gpio_init();
+	display_ltdc_init();
 }
 
 /**
@@ -128,6 +244,19 @@ void sendData(uint8_t data) {
 	taskEXIT_CRITICAL();
 	vTaskDelay(1);
 	LCD_CS_HIGH();
+}
+
+/**
+ * Flush a frame buffer to display. Since using LTDC we simply change the
+ * frame buffer address of the peripheral
+ *
+ * addr: Start address of frame buffer
+ *
+ * Return: None
+ * */
+void display_flush_frame_buffer(uint8_t* addr) {
+	HAL_LTDC_SetAddress_NoReload(&lcdLTDC, (uint32_t) addr, 0);
+	HAL_LTDC_Reload(&lcdLTDC, LTDC_RELOAD_VERTICAL_BLANKING);
 }
 
 /**

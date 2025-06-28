@@ -11,7 +11,7 @@
 // DRAM controller handle
 static SDRAM_HandleTypeDef dramHandle;
 // Pointer to use to access dram
-static uint8_t* dramPtr = (uint8_t*) DRAM_START_ADDR;
+static __IO uint8_t* dramPtr = (uint8_t*) DRAM_START_ADDR;
 
 /**
  * Initialise GPIO pins needed for DRAM
@@ -82,6 +82,7 @@ static void dram_gpio_init(void) {
 static void dram_fmc_init(void) {
 	__DRAM_FMC_CLK_EN();
 	FMC_SDRAM_TimingTypeDef timing = {0};
+	HAL_StatusTypeDef status;
 
 	// initialise dramHandle struct
 	dramHandle.Instance = DRAM_FMC_INSTANCE;
@@ -105,7 +106,8 @@ static void dram_fmc_init(void) {
 	timing.SelfRefreshTime = DRAM_FMC_SELF_REFRESH_TIME;
 	timing.WriteRecoveryTime = DRAM_FMC_WRITE_RECOVERY_TIME;
 
-	HAL_SDRAM_Init(&dramHandle, &timing);
+	status = HAL_SDRAM_Init(&dramHandle, &timing);
+	return;
 }
 
 /**
@@ -155,7 +157,7 @@ void dram_init(void) {
 /**
  * Fill DRAM section with given 8-bit value
  *
- * startAddr: Start address (STM32 relative)
+ * startAddr: Start address (DRAM relative!!!!)
  * endAddr: End address
  * value: Value to fill with
  *
@@ -187,4 +189,19 @@ void dram_clear_section(uint32_t startAddr, uint32_t endAddr) {
 void dram_clear(void) {
 	// clear entire DRAM
 	dram_clear_section(DRAM_START_ADDR, DRAM_START_ADDR + DRAM_SIZE);
+}
+
+/**
+ * Read a section of data from external DRAM.
+ *
+ * startAddr: Address to begin reading from
+ * dest: Destination buffer
+ * size: Number of bytes to read
+ *
+ * Return: None
+ * */
+void dram_read_section(uint32_t startAddr, uint8_t* dest, uint32_t size) {
+	for (uint32_t i = startAddr; i < startAddr + size; i++) {
+		dest[i] = *(dramPtr + i);
+	}
 }

@@ -32,10 +32,6 @@ TaskHandle_t task_dgas_sys_get_handle(void) {
 void task_dgas_sys(void) {
 	AccelData data;
 	uint32_t count = 0;
-	dram_init();
-	vTaskDelay(10);
-	dram_fill_section(DRAM_START_ADDR, DRAM_START_ADDR + 480*480*2, 0xFF);
-
 	for (;;) {
 		if (xQueueReceive(queueAccelerometerData, &data, 10) == pdTRUE) {
 			count++;
