@@ -40,11 +40,11 @@
 								 __LCD_CS_PORT_CLK_EN();\
 								 __LCD_NRST_PORT_CLK_EN();}
 
-#define LCD_CS_LOW() (HAL_GPIO_WritePin(LCD_CS_PORT, LCD_CS_PIN, 0))
-#define LCD_CS_HIGH() (HAL_GPIO_WritePin(LCD_CS_PORT, LCD_CS_PIN, 1))
+#define LCD_CS_LOW() HAL_GPIO_WritePin(LCD_CS_PORT, LCD_CS_PIN, 0)
+#define LCD_CS_HIGH() HAL_GPIO_WritePin(LCD_CS_PORT, LCD_CS_PIN, 1)
 
-#define LCD_NRST_LOW() (HAL_GPIO_WritePin(LCD_NRST_PORT, LCD_NRST_PIN, 0))
-#define LCD_NRST_HIGH() (HAL_GPIO_WritePin(LCD_NRST_PORT, LCD_NRST_PIN, 1))
+#define LCD_NRST_LOW() HAL_GPIO_WritePin(LCD_NRST_PORT, LCD_NRST_PIN, 0)
+#define LCD_NRST_HIGH() HAL_GPIO_WritePin(LCD_NRST_PORT, LCD_NRST_PIN, 1)
 
 /******************************* LCD LTDC ********************************/
 #define LCD_LTDC_INSTANCE LTDC

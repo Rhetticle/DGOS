@@ -11,7 +11,7 @@
 #include <dgas_types.h>
 
 #define TASK_DGAS_SYS_PRIORITY (tskIDLE_PRIORITY + 3)
-#define TASK_DGAS_SYS_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
+#define TASK_DGAS_SYS_STACK_SIZE (configMINIMAL_STACK_SIZE * 4)
 
 void task_dgas_sys_init(void);
 

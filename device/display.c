@@ -61,11 +61,11 @@ static void display_spi_init(void) {
 	lcdBus.Instance = LCD_SPI_INSTANCE;
 	lcdBus.Init.Mode = SPI_MODE_MASTER;
 	lcdBus.Init.Direction = SPI_DIRECTION_1LINE;
-	lcdBus.Init.DataSize = SPI_DATASIZE_4BIT;
+	lcdBus.Init.DataSize = SPI_DATASIZE_9BIT;
 	lcdBus.Init.CLKPolarity = SPI_POLARITY_LOW;
 	lcdBus.Init.CLKPhase = SPI_PHASE_1EDGE;
 	lcdBus.Init.NSS = SPI_NSS_SOFT;
-	lcdBus.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+	lcdBus.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
 	lcdBus.Init.FirstBit = SPI_FIRSTBIT_MSB;
 	lcdBus.Init.TIMode = SPI_TIMODE_DISABLE;
 	lcdBus.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -101,32 +101,44 @@ static void display_ltdc_gpio_init(void) {
 	HAL_GPIO_Init(GPIOA, &init);
 
 	// port B
-	init.Pin = LCD_LTDC_PIN_R3 | LCD_LTDC_PIN_R6 |
-			   LCD_LTDC_PIN_G4 | LCD_LTDC_PIN_G5 |
+	init.Pin = LCD_LTDC_PIN_R3 | LCD_LTDC_PIN_R6;
+	init.Alternate = GPIO_AF9_LTDC;
+	HAL_GPIO_Init(GPIOB, &init);
+
+	init.Pin = LCD_LTDC_PIN_G4 | LCD_LTDC_PIN_G5 |
 			   LCD_LTDC_PIN_B6 | LCD_LTDC_PIN_B7;
+	init.Alternate = GPIO_AF14_LTDC;
 
 	HAL_GPIO_Init(GPIOB, &init);
 
 	// port C
 	init.Pin = LCD_LTDC_PIN_R5 | LCD_LTDC_PIN_G6 |
 			   LCD_LTDC_PIN_HSYNC;
+	init.Alternate = GPIO_AF14_LTDC;
 
 	HAL_GPIO_Init(GPIOC, &init);
 
 	// port D
 	init.Pin = LCD_LTDC_PIN_G7 | LCD_LTDC_PIN_B2;
+	init.Alternate = GPIO_AF14_LTDC;
 
 	HAL_GPIO_Init(GPIOD, &init);
 
 	// port F
 	init.Pin = LCD_LTDC_PIN_DE;
+	init.Alternate = GPIO_AF14_LTDC;
 
 	HAL_GPIO_Init(GPIOF, &init);
 
 	// port G
 	init.Pin = LCD_LTDC_PIN_R7 | LCD_LTDC_PIN_G3 |
-			   LCD_LTDC_PIN_B3 | LCD_LTDC_PIN_B4 |
 			   LCD_LTDC_PIN_CLK;
+	init.Alternate = GPIO_AF14_LTDC;
+
+	HAL_GPIO_Init(GPIOG, &init);
+
+	init.Pin = LCD_LTDC_PIN_B3 | LCD_LTDC_PIN_B4;
+	init.Alternate = GPIO_AF9_LTDC;
 
 	HAL_GPIO_Init(GPIOG, &init);
 }
@@ -218,11 +230,11 @@ void display_reset(void) {
  * Return: None
  * */
 void sendCommand(uint8_t cmd) {
-	uint8_t send = cmd;
+	uint16_t send = (uint16_t) cmd;
 	LCD_CS_LOW();
 	vTaskDelay(1);
 	taskENTER_CRITICAL();
-	HAL_SPI_Transmit(&lcdBus, &send, sizeof(send), 10);
+	HAL_SPI_Transmit(&hspi1, &send, 1, 100);
 	taskEXIT_CRITICAL();
 	vTaskDelay(1);
 	LCD_CS_HIGH();
@@ -236,11 +248,11 @@ void sendCommand(uint8_t cmd) {
  * Return: None
  * */
 void sendData(uint8_t data) {
-	uint8_t send = (1 << LCD_DC_BIT_POS) | data;
+	uint16_t send = (1 << LCD_DC_BIT_POS) | data;
 	LCD_CS_LOW();
 	vTaskDelay(1);
 	taskENTER_CRITICAL();
-	HAL_SPI_Transmit(&lcdBus, &send, sizeof(send), 10);
+	HAL_SPI_Transmit(&hspi1, &send, 1, 100);
 	taskEXIT_CRITICAL();
 	vTaskDelay(1);
 	LCD_CS_HIGH();
@@ -539,7 +551,7 @@ void display_init(void) {
 	#endif
 	sendCommand(0x11);
 
-	HAL_Delay(120);
+	vTaskDelay(120);
 
 	sendCommand(0x29);
 

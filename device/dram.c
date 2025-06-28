@@ -82,7 +82,6 @@ static void dram_gpio_init(void) {
 static void dram_fmc_init(void) {
 	__DRAM_FMC_CLK_EN();
 	FMC_SDRAM_TimingTypeDef timing = {0};
-	HAL_StatusTypeDef status;
 
 	// initialise dramHandle struct
 	dramHandle.Instance = DRAM_FMC_INSTANCE;
@@ -106,8 +105,7 @@ static void dram_fmc_init(void) {
 	timing.SelfRefreshTime = DRAM_FMC_SELF_REFRESH_TIME;
 	timing.WriteRecoveryTime = DRAM_FMC_WRITE_RECOVERY_TIME;
 
-	status = HAL_SDRAM_Init(&dramHandle, &timing);
-	return;
+	HAL_SDRAM_Init(&dramHandle, &timing);
 }
 
 /**
@@ -136,7 +134,7 @@ void dram_init(void) {
 	cmd.ModeRegisterDefinition = 0;
 
 	HAL_SDRAM_SendCommand(&dramHandle, &cmd, 10);
-	HAL_Delay(1); // must wait at least 100us here
+	//vTaskDelay(1);
 
 	// enable precharge all (PALL)
 	cmd.CommandMode = FMC_SDRAM_CMD_PALL;
@@ -164,6 +162,10 @@ void dram_init(void) {
  * Return: None
  * */
 void dram_fill_section(uint32_t startAddr, uint32_t endAddr, uint8_t value) {
+
+	if (startAddr > endAddr) {
+		return;
+	}
 	for (uint32_t i = startAddr; i < endAddr; i++) {
 		*(dramPtr + i) = value;
 	}
@@ -202,6 +204,6 @@ void dram_clear(void) {
  * */
 void dram_read_section(uint32_t startAddr, uint8_t* dest, uint32_t size) {
 	for (uint32_t i = startAddr; i < startAddr + size; i++) {
-		dest[i] = *(dramPtr + i);
+		dest[i - startAddr] = *(dramPtr + i);
 	}
 }
