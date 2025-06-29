@@ -30,35 +30,40 @@ static void flash_init_gpio(void) {
 	// enable GPIO peripheral Clocks
 	__FLASH_QSPI_GPIO_CLK_EN_ALL();
 	GPIO_InitTypeDef init = {0};
+	// ports B, E and F are being used
+
+	// common settings between all QSPI pins
+	init.Mode = GPIO_MODE_AF_PP;
+	init.Pull = GPIO_NOPULL;
+	init.Speed = GPIO_SPEED_HIGH;
 
 	init.Pin = FLASH_QSPI_NCS_PIN;
-	init.Mode = MODE_OUTPUT;
-	init.Pull = GPIO_PULLUP;
-	init.Speed = GPIO_SPEED_HIGH;
+	init.Alternate = FLASH_QSPI_NCS_AF;
 
 	HAL_GPIO_Init(FLASH_QSPI_NCS_PORT, &init);
 
 	init.Pin = FLASH_QSPI_CLK_PIN;
-	init.Mode = GPIO_MODE_AF_PP;
-	init.Pull = GPIO_NOPULL;
-	init.Alternate = GPIO_AF10_QUADSPI;
+	init.Alternate = FLASH_QSPI_CLK_AF;
 
 	HAL_GPIO_Init(FLASH_QSPI_CLK_PORT, &init);
 
-	// initialise QSPI IO pins
 	init.Pin = FLASH_QSPI_IO_ZERO_PIN;
+	init.Alternate = FLASH_QSPI_IO_ZERO_AF;
 
 	HAL_GPIO_Init(FLASH_QSPI_IO_ZERO_PORT, &init);
 
 	init.Pin = FLASH_QSPI_IO_ONE_PIN;
+	init.Alternate = FLASH_QSPI_IO_ONE_AF;
 
 	HAL_GPIO_Init(FLASH_QSPI_IO_ONE_PORT, &init);
 
 	init.Pin = FLASH_QSPI_IO_TWO_PIN;
+	init.Alternate = FLASH_QSPI_IO_TWO_AF;
 
 	HAL_GPIO_Init(FLASH_QSPI_IO_TWO_PORT, &init);
 
 	init.Pin = FLASH_QSPI_IO_THREE_PIN;
+	init.Alternate = FLASH_QSPI_IO_THREE_AF;
 
 	HAL_GPIO_Init(FLASH_QSPI_IO_THREE_PORT, &init);
 }
@@ -79,7 +84,7 @@ static void flash_init_qspi(void) {
 	qspiFlash.Init.FifoThreshold = FLASH_QSPI_FIFO_THRESHOLD;
 	qspiFlash.Init.FlashID = QSPI_FLASH_ID_1;
 	qspiFlash.Init.FlashSize = FLASH_QSPI_MEMORY_SIZE;
-	qspiFlash.Init.SampleShifting = QSPI_SAMPLE_SHIFTING_NONE;
+	qspiFlash.Init.SampleShifting = QSPI_SAMPLE_SHIFTING_HALFCYCLE;
 
 	HAL_QSPI_Init(&qspiFlash);
 }
@@ -90,8 +95,8 @@ static void flash_init_qspi(void) {
  * Return: None
  * */
 void flash_init_hardware(void) {
-	flash_init_gpio();
 	flash_init_qspi();
+	flash_init_gpio();
 }
 
 #ifdef FLASH_USE_FREERTOS
@@ -194,9 +199,7 @@ DeviceStatus flash_read_reg(uint8_t regInstr, uint8_t* dest, uint32_t timeout) {
 
 	cmd.Instruction = regInstr;
 	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
-	cmd.Address = QSPI_ADDRESS_NONE;
-	cmd.AddressMode = QSPI_ADDRESS_4_LINES;
-	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
+	cmd.AddressMode = QSPI_ADDRESS_NONE;
 	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
 	cmd.DataMode = QSPI_DATA_1_LINE;
 	cmd.DummyCycles = 0;
@@ -231,9 +234,7 @@ DeviceStatus flash_write_reg(uint8_t regInstr, uint8_t* value) {
 
 	cmd.Instruction = regInstr;
 	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
-	cmd.Address = QSPI_ADDRESS_NONE;
-	cmd.AddressMode = QSPI_ADDRESS_4_LINES;
-	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
+	cmd.AddressMode = QSPI_ADDRESS_NONE;
 	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
 	cmd.DataMode = QSPI_DATA_1_LINE;
 	cmd.DummyCycles = 0;
@@ -242,6 +243,10 @@ DeviceStatus flash_write_reg(uint8_t regInstr, uint8_t* value) {
 	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
 	cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
 
+	// need to enable writing in order to modify register value
+	if ((status = flash_write_enable()) != DEV_OK) {
+		return status;
+	}
 	// send command over QSPI
 	if ((status = flash_command(&cmd)) != DEV_OK) {
 		return status;
@@ -349,12 +354,10 @@ DeviceStatus flash_write_enable(void) {
 	cmd.Instruction = FLASH_WRITE_ENABLE;
 	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
 	cmd.Address = QSPI_ADDRESS_NONE;
-	cmd.AddressMode = QSPI_ADDRESS_4_LINES;
-	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
 	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
-	cmd.DataMode = QSPI_DATA_4_LINES;
+	cmd.DataMode = QSPI_DATA_NONE;
 	cmd.DummyCycles = 0;
-	cmd.NbData = QSPI_DATA_NONE;
+	cmd.NbData = 0;
 	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
 	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
 	cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
@@ -381,6 +384,8 @@ DeviceStatus flash_get_device_and_mfr_id(uint16_t* id) {
 
 	cmd.Instruction = FLASH_MFR_ID;
 	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
+	// need to give address 0x0000 along with instruction
+	// check datasheet
 	cmd.Address = 0x0000;
 	cmd.AddressMode = QSPI_ADDRESS_1_LINE;
 	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
@@ -502,7 +507,7 @@ DeviceStatus flash_read_chunk(FlashChunk* dest) {
  * */
 DeviceStatus flash_enable_qspi(void) {
 	DeviceStatus status;
-	uint8_t statRegTwo;
+	uint8_t statRegTwo, statRegThree;
 
 	if ((status = flash_read_reg(FLASH_READ_STAT_REG_TWO, &statRegTwo, 100)) != DEV_OK) {
 		return status;
@@ -514,6 +519,22 @@ DeviceStatus flash_enable_qspi(void) {
 	if ((status = flash_write_reg(FLASH_WRITE_STAT_REG_TWO, &statRegTwo)) != DEV_OK) {
 		return status;
 	}
+	// next operation is optional but will increase output drive
+	// strength of IO pins of flash IC to give better rise times
+	// we will set the DRV[1:0] bits of status register 3 to zero
+	// for maximum drive strength
+
+	if ((status = flash_read_reg(FLASH_READ_STAT_REG_THREE, &statRegThree, 100)) != DEV_OK) {
+		return status;
+	}
+	// clear DRV[1:0] to zero
+	statRegThree &= ~((1 << DRV0) | (1 << DRV1));
+
+	// write new value to status register three
+	if ((status = flash_write_reg(FLASH_WRITE_STAT_REG_THREE, &statRegThree)) != DEV_OK) {
+		return status;
+	}
+
 	return DEV_OK;
 }
 

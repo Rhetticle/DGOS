@@ -35,8 +35,7 @@ void task_dgas_sys(void) {
 	AccelData data;
 	DeviceStatus status;
 	uint32_t count = 0;
-	uint8_t dId;
-	uint8_t mId;
+	uint8_t dId, mId, s1, s2, s3;
 	taskENTER_CRITICAL();
 	display_init();
 	dram_init();
@@ -44,9 +43,8 @@ void task_dgas_sys(void) {
 	dram_fill_section(0, 480*480*2, 0xFF);
 	flash_init();
 	taskEXIT_CRITICAL();
+	status = flash_read_reg(FLASH_READ_STAT_REG_THREE, &s3, 100);
 
-	flash_get_device_id(&dId);
-	flash_get_mfr_id(&mId);
 	for (;;) {
 
 		if (xQueueReceive(queueAccelerometerData, &data, 10) == pdTRUE) {
