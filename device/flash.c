@@ -186,7 +186,43 @@ DeviceStatus flash_data(uint8_t* data, uint32_t size) {
 }
 
 /**
- * Read register from flash IC.
+ * Read information from flash IC e.g. JEDEC ID.
+ *
+ * instruction: Instruction to issue
+ * dest: Destination buffer
+ * size: Number of bytes in response
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_read_info(uint8_t instruction, uint8_t* dest, uint32_t size, uint32_t timeout) {
+	QSPI_CommandTypeDef cmd = {0};
+	DeviceStatus status;
+
+	cmd.Instruction = instruction;
+	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
+	cmd.AddressMode = QSPI_ADDRESS_NONE;
+	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
+	cmd.DataMode = QSPI_DATA_1_LINE;
+	cmd.DummyCycles = 0;
+	cmd.NbData = size;
+	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
+	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
+	cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
+
+	// issue instruction
+	if ((status = flash_command(&cmd)) != DEV_OK) {
+		return status;
+	}
+
+	// wait for chip response
+	if ((status = flash_receive(dest, FLASH_DATA_TIMEOUT)) != DEV_OK) {
+		return status;
+	}
+	return DEV_OK;
+}
+
+/**
+ * Read 8-bit register from flash IC.
  *
  * regInstr: Instruction opcode for accessing desired register
  * timeout: Timeout to use whilst receiving
@@ -194,30 +230,7 @@ DeviceStatus flash_data(uint8_t* data, uint32_t size) {
  * Return: Status indicating success or failure
  * */
 DeviceStatus flash_read_reg(uint8_t regInstr, uint8_t* dest, uint32_t timeout) {
-	QSPI_CommandTypeDef cmd = {0};
-	DeviceStatus status;
-
-	cmd.Instruction = regInstr;
-	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
-	cmd.AddressMode = QSPI_ADDRESS_NONE;
-	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
-	cmd.DataMode = QSPI_DATA_1_LINE;
-	cmd.DummyCycles = 0;
-	cmd.NbData = 1;
-	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
-	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
-	cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
-
-	// send read instruction over QSPI
-	if ((status = flash_command(&cmd)) != DEV_OK) {
-		return status;
-	}
-
-	// wait for response from chip
-	if ((status = flash_receive(dest, FLASH_COMMAND_TIMEOUT)) != DEV_OK) {
-		return status;
-	}
-	return DEV_OK;
+	return flash_read_info(regInstr, dest, sizeof(uint8_t), timeout);
 }
 
 /**
@@ -313,7 +326,7 @@ DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, bool set, uint32_
  *
  * Return: Status indicating success or failure
  * */
-DeviceStatus flash_read(uint8_t* dest, uint32_t size, uint32_t addr) {
+DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr) {
 	QSPI_CommandTypeDef cmd = {0};
 	DeviceStatus status;
 
@@ -446,13 +459,29 @@ DeviceStatus flash_get_mfr_id(uint8_t* mfr) {
 }
 
 /**
- * Read JEDEC ID of flash IC
+ * Read 16-bit JEDEC ID of flash IC
  *
  * jedec: Pointer to variable to store ID
  *
  * Return: Status indicating success or failure
  * */
-DeviceStatus flash_get_jedec_id(uint8_t* jedec) {
+DeviceStatus flash_get_jedec_id(uint16_t* jedec) {
+	DeviceStatus status;
+	// we will issue the JEDEC ID instruction
+	// note that the manufacturer ID will also be given
+	// in the response along with the 16-bit JEDEC so
+	// will receive 24-bits total
+	uint8_t resp[FLASH_ID_JEDEC_RESPONSE_SIZE];
+
+	if ((status = flash_read_info(FLASH_JEDEC_ID, resp,
+									sizeof(resp), FLASH_DATA_TIMEOUT)) != DEV_OK) {
+		return status;
+	}
+	// resp[0] is manufacturer ID
+	// resp[1] is upper byte of JEDEC
+	// resp[2] is lower byte of JEDEC
+
+	*jedec = (resp[1] << 8) | resp[2];
 	return DEV_OK;
 }
 

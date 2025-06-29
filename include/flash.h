@@ -205,6 +205,8 @@ typedef struct{
 #define FLASH_ID_EXTRACT_DEVICE_ID(id)		((id & FLASH_DEVICE_ID_MASK) >> 8)
 #define FLASH_ID_EXTRACT_MFR_ID(id)			((id & FLASH_MFR_ID_MASK))
 
+#define FLASH_ID_JEDEC_RESPONSE_SIZE 3
+
 #ifndef DGAS_CONFIG_FLASH_CHUNK_SIZE
 #define FLASH_CHUNK_SIZE 64
 #else
@@ -223,14 +225,16 @@ typedef struct{
 void flash_init_hardware(void);
 DeviceStatus flash_command(QSPI_CommandTypeDef* cmd);
 DeviceStatus flash_receive(uint8_t* dest, uint32_t timeout);
+DeviceStatus flash_data(uint8_t* data, uint32_t size);
+DeviceStatus flash_read_info(uint8_t instruction, uint8_t* dest, uint32_t size, uint32_t timeout);
 DeviceStatus flash_read_reg(uint8_t regInstr, uint8_t* dest, uint32_t timeout);
 DeviceStatus flash_write_reg(uint8_t regInstr, uint8_t* value);
 DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, bool set, uint32_t timeout);
-DeviceStatus flash_read(uint8_t* dest, uint32_t size, uint32_t addr);
+DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr);
 DeviceStatus flash_write_enable(void);
 DeviceStatus flash_get_device_id(uint8_t* id);
 DeviceStatus flash_get_mfr_id(uint8_t* mfr);
-DeviceStatus flash_get_jedec_id(uint8_t* jedec);
+DeviceStatus flash_get_jedec_id(uint16_t* jedec);
 DeviceStatus flash_write(uint8_t* data, uint32_t size, uint32_t addr);
 DeviceStatus flash_erase_chip(void);
 DeviceStatus flash_write_chunk(FlashChunk* chunk);
