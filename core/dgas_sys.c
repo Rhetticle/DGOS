@@ -35,8 +35,8 @@ void task_dgas_sys(void) {
 	AccelData data;
 	DeviceStatus status;
 	uint32_t count = 0;
-	uint8_t s3;
-	uint16_t jedec;
+	uint8_t s3, mid, did;
+	uint8_t mem[64] = {0xAA};
 	taskENTER_CRITICAL();
 	display_init();
 	dram_init();
@@ -44,8 +44,10 @@ void task_dgas_sys(void) {
 	dram_fill_section(0, 480*480*2, 0xFF);
 	flash_init();
 	taskEXIT_CRITICAL();
-	status = flash_read_reg(FLASH_READ_STAT_REG_THREE, &s3, 100);
-	status = flash_get_jedec_id(&jedec);
+	flash_get_device_id(&did);
+	flash_get_mfr_id(&mid);
+	flash_read_reg(FLASH_READ_STAT_REG_THREE, &s3, 100);
+	status = flash_read_mem(mem, sizeof(mem), 0x00);
 
 	for (;;) {
 

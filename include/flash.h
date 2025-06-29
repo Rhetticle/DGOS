@@ -85,7 +85,9 @@ typedef struct{
 #define FLASH_COMMAND_TIMEOUT 	100 // 100ms timeout on commands
 #define FLASH_DATA_TIMEOUT		100 // 100ms timeout on data
 
+
 /******************************** FLASH MEMORY INSTRUCTION OPCODES ***********************************/
+
 
 // Write and program related instructions
 
@@ -158,7 +160,9 @@ typedef struct{
 #define FLASH_SET_BURST_WITH_WRAP 					 	0x77
 #define FLASH_POWER_DOWN 								0xB9
 
+
 /*********************** FLASH REGISTER BIT POSITIONS *****************************/
+
 
 // Status register one
 #define BUSY 	1 << 0
@@ -193,7 +197,21 @@ typedef struct{
 #define DRV1	1 << 6
 /******** BIT POS 7 RESERVED ****/
 
+
+/******************** READ Related Constants ********************/
+
+
+#define FLASH_READ_DUMMY_CLOCKS		6 // need a few dummy clocks before data is sent
+
+
+/***************** INSTRUCTION Related Constants *****************/
+
+#define FLASH_INSTRUCTION_NO_ARGS	0
+#define FLASH_INSTRUCTION_NO_EXPECT	0
+#define FLASH_INSTRUCTION_NO_DUMMY	0
+
 /********************** ID Related Constants ********************/
+
 
 // check datasheet
 #define FLASH_ID_DEVICE_ID_VALUE	0x18
@@ -221,11 +239,18 @@ typedef struct{
 #define DGAS_TASK_FLASH_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
 #endif /* FLASH_USE_FREERTOS */
 
+
+
 /****************** Function Prototypes ************************/
+
+
+
 void flash_init_hardware(void);
 DeviceStatus flash_command(QSPI_CommandTypeDef* cmd);
 DeviceStatus flash_receive(uint8_t* dest, uint32_t timeout);
 DeviceStatus flash_data(uint8_t* data, uint32_t size);
+DeviceStatus flash_instruction(uint8_t instruction, uint8_t* args, uint32_t argCount,
+								uint32_t expect, uint32_t dummy);
 DeviceStatus flash_read_info(uint8_t instruction, uint8_t* dest, uint32_t size, uint32_t timeout);
 DeviceStatus flash_read_reg(uint8_t regInstr, uint8_t* dest, uint32_t timeout);
 DeviceStatus flash_write_reg(uint8_t regInstr, uint8_t* value);
