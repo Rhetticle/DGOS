@@ -34,7 +34,7 @@ static void flash_init_gpio(void) {
 	init.Pin = FLASH_QSPI_NCS_PIN;
 	init.Mode = MODE_OUTPUT;
 	init.Pull = GPIO_PULLUP;
-	init.Speed = GPIO_SPEED_FAST;
+	init.Speed = GPIO_SPEED_HIGH;
 
 	HAL_GPIO_Init(FLASH_QSPI_NCS_PORT, &init);
 
@@ -72,14 +72,14 @@ static void flash_init_qspi(void) {
 	__FLASH_QSPI_INSTANCE_CLK_EN();
 	// initialise QSPI peripheral
 	qspiFlash.Instance = FLASH_QSPI_INSTANCE;
-	qspiFlash.Init.ChipSelectHighTime = QSPI_CS_HIGH_TIME_1_CYCLE;
+	qspiFlash.Init.ChipSelectHighTime = QSPI_CS_HIGH_TIME_6_CYCLE;
 	qspiFlash.Init.ClockMode = QSPI_CLOCK_MODE_0;
 	qspiFlash.Init.ClockPrescaler = FLASH_QSPI_CLOCK_PRESCALER;
 	qspiFlash.Init.DualFlash = QSPI_DUALFLASH_DISABLE;
 	qspiFlash.Init.FifoThreshold = FLASH_QSPI_FIFO_THRESHOLD;
 	qspiFlash.Init.FlashID = QSPI_FLASH_ID_1;
 	qspiFlash.Init.FlashSize = FLASH_QSPI_MEMORY_SIZE;
-	qspiFlash.Init.SampleShifting = QSPI_SAMPLE_SHIFTING_HALFCYCLE;
+	qspiFlash.Init.SampleShifting = QSPI_SAMPLE_SHIFTING_NONE;
 
 	HAL_QSPI_Init(&qspiFlash);
 }
@@ -90,14 +90,8 @@ static void flash_init_qspi(void) {
  * Return: None
  * */
 void flash_init_hardware(void) {
-#ifdef FLASH_USE_FREERTOS
-	taskENTER_CRITICAL();
-#endif /* FLASH_USE_FREERTOS */
 	flash_init_gpio();
 	flash_init_qspi();
-#ifdef FLASH_USE_FREERTOS
-	taskEXIT_CRITICAL();
-#endif /* FLASH_USE_FREERTOS */
 }
 
 #ifdef FLASH_USE_FREERTOS
@@ -161,6 +155,32 @@ DeviceStatus flash_receive(uint8_t* dest, uint32_t timeout) {
 }
 
 /**
+ * Write data to flash IC to accompany command or write actual
+ * flash data.
+ *
+ * data: Data to write
+ * size: Number of bytes to write
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_data(uint8_t* data, uint32_t size) {
+#ifdef FLASH_USE_FREERTOS
+	taskENTER_CRITICAL();
+	if (HAL_QSPI_Transmit(&qspiFlash, data, FLASH_DATA_TIMEOUT) != HAL_OK) {
+		taskEXIT_CRITICAL();
+		return DEV_WRITE_ERROR;
+	}
+	taskEXIT_CRITICAL();
+	return DEV_OK;
+#else
+	if (HAL_QSPI_Transmit(&qspiFlash, data, FLASH_DATA_TIMEOUT) != HAL_OK) {
+		return DEV_WRITE_ERROR;
+	}
+	return DEV_OK;
+#endif /* FLASH_USE_FREERTOS */
+}
+
+/**
  * Read register from flash IC.
  *
  * regInstr: Instruction opcode for accessing desired register
@@ -178,18 +198,57 @@ DeviceStatus flash_read_reg(uint8_t regInstr, uint8_t* dest, uint32_t timeout) {
 	cmd.AddressMode = QSPI_ADDRESS_4_LINES;
 	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
 	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
-	cmd.DataMode = QSPI_DATA_NONE;
-	cmd.DummyCycles = 0U;
-	cmd.NbData = 0;
+	cmd.DataMode = QSPI_DATA_1_LINE;
+	cmd.DummyCycles = 0;
+	cmd.NbData = 1;
 	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
 	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
 	cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
 
+	// send read instruction over QSPI
 	if ((status = flash_command(&cmd)) != DEV_OK) {
 		return status;
 	}
 
+	// wait for response from chip
 	if ((status = flash_receive(dest, FLASH_COMMAND_TIMEOUT)) != DEV_OK) {
+		return status;
+	}
+	return DEV_OK;
+}
+
+/**
+ * Write value to flash IC register
+ *
+ * regInstr: Instruction opcode to access register
+ * value: Value to write to register
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_write_reg(uint8_t regInstr, uint8_t* value) {
+	QSPI_CommandTypeDef cmd = {0};
+	DeviceStatus status;
+
+	cmd.Instruction = regInstr;
+	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
+	cmd.Address = QSPI_ADDRESS_NONE;
+	cmd.AddressMode = QSPI_ADDRESS_4_LINES;
+	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
+	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
+	cmd.DataMode = QSPI_DATA_1_LINE;
+	cmd.DummyCycles = 0;
+	cmd.NbData = 1;
+	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
+	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
+	cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
+
+	// send command over QSPI
+	if ((status = flash_command(&cmd)) != DEV_OK) {
+		return status;
+	}
+
+	// send argument for command
+	if ((status = flash_data(value, sizeof(uint8_t))) != DEV_OK) {
 		return status;
 	}
 	return DEV_OK;
@@ -308,6 +367,91 @@ DeviceStatus flash_write_enable(void) {
 }
 
 /**
+ * Get the device and manufacturer ID of flash IC as a single
+ * 16 bit value. The lower byte will be manufacturer ID and the
+ * upper byte will be device ID
+ *
+ * id: Variable to store resulting ID in
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_get_device_and_mfr_id(uint16_t* id) {
+	DeviceStatus status;
+	QSPI_CommandTypeDef cmd = {0};
+
+	cmd.Instruction = FLASH_MFR_ID;
+	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
+	cmd.Address = 0x0000;
+	cmd.AddressMode = QSPI_ADDRESS_1_LINE;
+	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
+	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
+	cmd.DataMode = QSPI_DATA_1_LINE;
+	cmd.DummyCycles = 0;
+	cmd.NbData = sizeof(uint16_t);
+	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
+	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
+	cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
+
+	// send command over QSPI
+	if ((status = flash_command(&cmd)) != DEV_OK) {
+		return status;
+	}
+
+	// receive response from chip
+	if ((status = flash_receive((uint8_t*) id, 100)) != DEV_OK) {
+		return status;
+	}
+	return DEV_OK;
+}
+
+/**
+ * Read device ID of flash IC.
+ *
+ * id: Pointer to variable to store ID
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_get_device_id(uint8_t* id) {
+	uint16_t mfrDevId;
+	DeviceStatus status;
+
+	if ((status = flash_get_device_and_mfr_id(&mfrDevId)) != DEV_OK) {
+		return status;
+	}
+	*id = FLASH_ID_EXTRACT_DEVICE_ID(mfrDevId);
+	return DEV_OK;
+}
+
+/**
+ * Read manufacturer ID of flash IC.
+ *
+ * mfs: Pointer to variable to store ID
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_get_mfr_id(uint8_t* mfr) {
+	uint16_t mfrDevId;
+	DeviceStatus status;
+
+	if ((status = flash_get_device_and_mfr_id(&mfrDevId)) != DEV_OK) {
+		return status;
+	}
+	*mfr = FLASH_ID_EXTRACT_MFR_ID(mfrDevId);
+	return DEV_OK;
+}
+
+/**
+ * Read JEDEC ID of flash IC
+ *
+ * jedec: Pointer to variable to store ID
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_get_jedec_id(uint8_t* jedec) {
+	return DEV_OK;
+}
+
+/**
  * Write data to flash memory
  *
  * data: Data to write
@@ -349,6 +493,40 @@ DeviceStatus flash_write_chunk(FlashChunk* chunk) {
  * */
 DeviceStatus flash_read_chunk(FlashChunk* dest) {
 	return DEV_OK;
+}
+
+/**
+ * Enable QSPI interface of flash chip itself
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_enable_qspi(void) {
+	DeviceStatus status;
+	uint8_t statRegTwo;
+
+	if ((status = flash_read_reg(FLASH_READ_STAT_REG_TWO, &statRegTwo, 100)) != DEV_OK) {
+		return status;
+	}
+	// have read status register two value
+	// now set QE bit to 1 to enable QSPI
+	statRegTwo |= (1 << QE);
+
+	if ((status = flash_write_reg(FLASH_WRITE_STAT_REG_TWO, &statRegTwo)) != DEV_OK) {
+		return status;
+	}
+	return DEV_OK;
+}
+
+/**
+ * Initialise flash IC and related peripherals for use
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_init(void) {
+	// initialise GPIO pins and QSPI peripheral
+	flash_init_hardware();
+	// enable the flash ICs QSPI interface
+	return flash_enable_qspi();
 }
 
 #ifdef FLASH_USE_FREERTOS

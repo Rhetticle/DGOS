@@ -11,6 +11,7 @@
 #include <dgas_ui.h>
 #include <accelerometer.h>
 #include <dram.h>
+#include <flash.h>
 #include <display.h>
 
 // Task handle of DGAS system task
@@ -32,12 +33,20 @@ TaskHandle_t task_dgas_sys_get_handle(void) {
  * */
 void task_dgas_sys(void) {
 	AccelData data;
+	DeviceStatus status;
 	uint32_t count = 0;
+	uint8_t dId;
+	uint8_t mId;
+	taskENTER_CRITICAL();
 	display_init();
 	dram_init();
 	vTaskDelay(10);
 	dram_fill_section(0, 480*480*2, 0xFF);
+	flash_init();
+	taskEXIT_CRITICAL();
 
+	flash_get_device_id(&dId);
+	flash_get_mfr_id(&mId);
 	for (;;) {
 
 		if (xQueueReceive(queueAccelerometerData, &data, 10) == pdTRUE) {

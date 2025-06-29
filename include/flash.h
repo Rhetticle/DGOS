@@ -60,12 +60,12 @@ typedef struct{
 										__FLASH_QSPI_IO_THREE_CLK_EN();}
 
 // QSPI source clock is 216MHz, flash IC can handle up to 133MHz so use prescaler of 1 (2 - 1)
-#define FLASH_QSPI_CLOCK_PRESCALER (2 - 1)
+#define FLASH_QSPI_CLOCK_PRESCALER (8 - 1)
 // number of bytes needed in FIFO in before reading
 #define FLASH_QSPI_FIFO_THRESHOLD 4
-// flash size of memory array (this is given as the number of address bits minus 1)
+// flash size of memory array (this is given as the number of address bits)
 // W25Q256JVEIQ is 32MiB so need 25 bits
-#define FLASH_QSPI_MEMORY_SIZE (25 - 1)
+#define FLASH_QSPI_MEMORY_SIZE (25)
 
 // Flash QSPI instance
 #ifndef DGAS_CONFIG_FLASH_QSPI_INSTANCE
@@ -76,7 +76,8 @@ typedef struct{
 #define __FLASH_QSPI_INSTANCE_CLK_EN() DGAS_CONFIG_FLASH_QSPI_INSTANCE_CLK_EN()
 #endif /* DGAS_CONFIG_FLASH_QSPI_INSTANCE */
 
-#define FLASH_COMMAND_TIMEOUT 100 // 100ms timeout on commands
+#define FLASH_COMMAND_TIMEOUT 	100 // 100ms timeout on commands
+#define FLASH_DATA_TIMEOUT		100 // 100ms timeout on data
 
 /******************************** FLASH MEMORY INSTRUCTION OPCODES ***********************************/
 
@@ -86,7 +87,7 @@ typedef struct{
 #define FLASH_WRITE_ENABLE_VOLATILE 					0x50
 #define FLASH_WRITE_DISABLE 							0x04
 #define FLASH_WRITE_STAT_REG_ONE 						0x01
-#define FLASH_WRITE_STAT_REG_TWE 						0x31
+#define FLASH_WRITE_STAT_REG_TWO 						0x31
 #define FLASH_WRITE_STAT_REG_THREE 						0x11
 #define FLASH_WRITE_EXT_ADDR 							0xC5
 #define FLASH_PAGE_PROGRAM 							 	0x02
@@ -163,6 +164,41 @@ typedef struct{
 #define TB		1 << 6
 #define SRP		1 << 7
 
+// Status register two
+// NOTE: Lock bits LB1 -> LB3 are one time programmable (OTP)
+// Programming these bits to 1 will make their corresponding pages
+// read only !!! THIS IS NOT REVERSABLE !!!
+#define SRL		1 << 0
+#define QE		1 << 1
+/******** BIT POS 2 RESERVED ****/
+#define LB1		1 << 3
+#define LB2		1 << 4
+#define LB3		1 << 5
+#define CMP		1 << 6
+#define SUS		1 << 7
+
+// Status register three
+#define ADS		1 << 0
+#define ADP		1 << 1
+#define WPS		1 << 2
+/******** BIT POS 3 RESERVED ****/
+/******** BIT POS 4 RESERVED ****/
+#define DRV0	1 << 5
+#define DRV1	1 << 6
+/******** BIT POS 7 RESERVED ****/
+
+/********************** ID Related Constants ********************/
+
+// check datasheet
+#define FLASH_ID_DEVICE_ID_VALUE	0x18
+#define FLASH_ID_MFR_ID_VALUE		0xEF
+// masks to extract device and manufacturer IDs from 16-bit ID
+#define FLASH_DEVICE_ID_MASK		0xFF00
+#define FLASH_MFR_ID_MASK			0x00FF
+
+#define FLASH_ID_EXTRACT_DEVICE_ID(id)		((id & FLASH_DEVICE_ID_MASK) >> 8)
+#define FLASH_ID_EXTRACT_MFR_ID(id)			((id & FLASH_MFR_ID_MASK))
+
 #ifndef DGAS_CONFIG_FLASH_CHUNK_SIZE
 #define FLASH_CHUNK_SIZE 64
 #else
@@ -182,13 +218,19 @@ void flash_init_hardware(void);
 DeviceStatus flash_command(QSPI_CommandTypeDef* cmd);
 DeviceStatus flash_receive(uint8_t* dest, uint32_t timeout);
 DeviceStatus flash_read_reg(uint8_t regInstr, uint8_t* dest, uint32_t timeout);
+DeviceStatus flash_write_reg(uint8_t regInstr, uint8_t* value);
 DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, bool set, uint32_t timeout);
 DeviceStatus flash_read(uint8_t* dest, uint32_t size, uint32_t addr);
 DeviceStatus flash_write_enable(void);
+DeviceStatus flash_get_device_id(uint8_t* id);
+DeviceStatus flash_get_mfr_id(uint8_t* mfr);
+DeviceStatus flash_get_jedec_id(uint8_t* jedec);
 DeviceStatus flash_write(uint8_t* data, uint32_t size, uint32_t addr);
 DeviceStatus flash_erase_chip(void);
 DeviceStatus flash_write_chunk(FlashChunk* chunk);
 DeviceStatus flash_read_chunk(FlashChunk* dest);
+DeviceStatus flash_enable_qspi(void);
+DeviceStatus flash_init(void);
 
 #ifdef FLASH_USE_FREERTOS
 void task_init_flash(void);
