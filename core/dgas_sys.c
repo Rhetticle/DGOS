@@ -45,7 +45,7 @@ void task_dgas_sys(void) {
 	flash_init();
 	taskEXIT_CRITICAL();
 	//flash_erase_chip();
-	status = flash_read_mem(mem, sizeof(mem), 0xFF);
+	status = flash_read_mem(mem, sizeof(mem), 0xFFFF);
 
 	for (;;) {
 

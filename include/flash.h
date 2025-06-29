@@ -201,7 +201,9 @@ typedef struct{
 /******************** READ Related Constants ********************/
 
 
-#define FLASH_READ_DUMMY_CLOCKS		6 // need a few dummy clocks before data is sent
+// need 8 dummy clocks between end of address and start of data according
+// to datasheet
+#define FLASH_READ_DUMMY_CLOCKS		8
 
 
 /***************** INSTRUCTION Related Constants *****************/

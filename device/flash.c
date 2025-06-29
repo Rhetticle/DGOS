@@ -353,7 +353,7 @@ DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr) {
 	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
 	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
 	cmd.DataMode = QSPI_DATA_4_LINES;
-	cmd.DummyCycles = FLASH_READ_DUMMY_CLOCKS;
+	cmd.DummyCycles = FLASH_READ_DUMMY_CLOCKS + 2;
 	cmd.NbData = size;
 	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
 	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
@@ -363,6 +363,7 @@ DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr) {
 		return status;
 	}
 
+	// wait for flash to respond with data
 	if ((status = flash_receive(dest, FLASH_DATA_TIMEOUT)) != DEV_OK) {
 		return status;
 	}
