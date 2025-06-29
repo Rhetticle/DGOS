@@ -15,4 +15,9 @@ typedef enum {
 	DEV_TIMEOUT
 }DeviceStatus;
 
+typedef enum {
+	DEV_FLAG_OPT_SET,
+	DEV_FLAG_OPT_CLEAR
+}DevFlagOpt;
+
 #endif /* INC_DEVICE_H_ */

@@ -298,7 +298,7 @@ DeviceStatus flash_write_reg(uint8_t regInstr, uint8_t* value) {
  *
  * Return: Status indicating succcess or failure
  * */
-DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, bool set, uint32_t timeout) {
+DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, DevFlagOpt opt, uint32_t timeout) {
 	DeviceStatus status;
 	uint8_t regVal;
 
@@ -308,7 +308,7 @@ DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, bool set, uint32_
 	}
 	uint32_t tickStart = HAL_GetTick();
 
-	if (set) {
+	if (opt == DEV_FLAG_OPT_SET) {
 		// loop until bit is set or until we timeout or read fails
 		while(!(regVal & bit)) {
 			if ((status = flash_read_reg(regInstr, &regVal, timeout)) != DEV_OK) {
@@ -349,7 +349,7 @@ DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr) {
 	cmd.Instruction = FLASH_READ_FAST_QUAD_OUTPUT;
 	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
 	cmd.Address = addr;
-	cmd.AddressMode = QSPI_ADDRESS_4_LINES;
+	cmd.AddressMode = QSPI_ADDRESS_1_LINE;
 	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
 	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
 	cmd.DataMode = QSPI_DATA_4_LINES;
@@ -384,7 +384,7 @@ DeviceStatus flash_write_enable(void) {
 		return status;
 	}
 
-	return flash_wait_on_flag(FLASH_READ_STAT_REG_ONE, WEL, true, 100);
+	return flash_wait_on_flag(FLASH_READ_STAT_REG_ONE, WEL, DEV_FLAG_OPT_SET, 100);
 }
 
 /**
@@ -509,7 +509,16 @@ DeviceStatus flash_write(uint8_t* data, uint32_t size, uint32_t addr) {
  * Return: Status indicating success or failure
  * */
 DeviceStatus flash_erase_chip(void) {
-	return DEV_OK;
+	DeviceStatus status;
+
+	if ((status = flash_instruction(FLASH_CHIP_ERASE, NULL, FLASH_INSTRUCTION_NO_ARGS,
+			FLASH_INSTRUCTION_NO_EXPECT, FLASH_INSTRUCTION_NO_DUMMY)) != DEV_OK) {
+		return status;
+	}
+	// wait for BUSY bit to clear meaning chip erase is done
+	// Chip erase may take a while so use max delay
+	return flash_wait_on_flag(FLASH_READ_STAT_REG_ONE, BUSY,
+						DEV_FLAG_OPT_CLEAR, FLASH_MAX_TIMEOUT);
 }
 
 /**

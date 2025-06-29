@@ -84,7 +84,7 @@ typedef struct{
 
 #define FLASH_COMMAND_TIMEOUT 	100 // 100ms timeout on commands
 #define FLASH_DATA_TIMEOUT		100 // 100ms timeout on data
-
+#define FLASH_MAX_TIMEOUT		HAL_MAX_DELAY
 
 /******************************** FLASH MEMORY INSTRUCTION OPCODES ***********************************/
 
@@ -254,7 +254,7 @@ DeviceStatus flash_instruction(uint8_t instruction, uint8_t* args, uint32_t argC
 DeviceStatus flash_read_info(uint8_t instruction, uint8_t* dest, uint32_t size, uint32_t timeout);
 DeviceStatus flash_read_reg(uint8_t regInstr, uint8_t* dest, uint32_t timeout);
 DeviceStatus flash_write_reg(uint8_t regInstr, uint8_t* value);
-DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, bool set, uint32_t timeout);
+DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, DevFlagOpt set, uint32_t timeout);
 DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr);
 DeviceStatus flash_write_enable(void);
 DeviceStatus flash_get_device_id(uint8_t* id);

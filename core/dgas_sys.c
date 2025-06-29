@@ -44,10 +44,8 @@ void task_dgas_sys(void) {
 	dram_fill_section(0, 480*480*2, 0xFF);
 	flash_init();
 	taskEXIT_CRITICAL();
-	flash_get_device_id(&did);
-	flash_get_mfr_id(&mid);
-	flash_read_reg(FLASH_READ_STAT_REG_THREE, &s3, 100);
-	status = flash_read_mem(mem, sizeof(mem), 0x00);
+	//flash_erase_chip();
+	status = flash_read_mem(mem, sizeof(mem), 0xFF);
 
 	for (;;) {
 
