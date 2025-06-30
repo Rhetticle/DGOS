@@ -247,7 +247,7 @@ DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr) {
 
 	fin.addr = addr;
 	fin.expect = size;
-	fin.dummy = FLASH_READ_DUMMY_CLOCKS;
+	fin.dummy = FLASH_READ_QUAD_OUTPUT_DUMMY_CLOCKS;
 	fin.opCode = FLASH_READ_FAST_QUAD_OUTPUT;
 
 	if ((status = flash_instruction(&fin, FLASH_INSTRUCTION_DATA_MODE_QUAD,
@@ -456,6 +456,60 @@ DeviceStatus flash_enable_qspi(void) {
 	}
 
 	return DEV_OK;
+}
+
+/**
+ * Enable memory mapped mode for the flash IC. This will map the address space
+ * of the external flash to the address space of the STM32 starting from
+ * 0x90000000.
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_enable_memory_mapped(void) {
+	QSPI_CommandTypeDef cmd = {0};
+	QSPI_MemoryMappedTypeDef conf = {0};
+	HAL_StatusTypeDef status;
+	// The command we give when going into memory mapped mode
+	// will be the command issued when memory is accessed, so
+	// we want it to be a read command. This means while the IC
+	// is in memory mapped mode it cannot be written to
+
+	// we want reading to be as fast as possible so will use
+	// FLASH_READ_QUAD_IO instruction which sends address
+	// using quad IO pins as well as data
+	cmd.Instruction = FLASH_READ_QUAD_IO;
+	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
+	cmd.Address = 0;
+	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
+	cmd.AddressMode = QSPI_ADDRESS_4_LINES;
+	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_4_LINES;
+	cmd.AlternateBytesSize = sizeof(uint8_t);
+	cmd.AlternateBytes = FLASH_READ_QUAD_IO_ALTERNATE_BYTE;
+	cmd.DataMode = QSPI_DATA_4_LINES;
+	cmd.DummyCycles = FLASH_READ_QUAD_IO_DUMMY_CLOCKS;
+	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
+	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
+	cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
+
+	// disable read timeout
+	conf.TimeOutActivation = QSPI_TIMEOUT_COUNTER_DISABLE;
+	conf.TimeOutPeriod = 0;
+
+	if ((status = HAL_QSPI_MemoryMapped(&qspiFlash, &cmd, &conf)) != HAL_OK) {
+		return status;
+	}
+
+	return DEV_OK;
+}
+
+/**
+ * Disable memory mapped mode for flash IC.
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_disable_memory_mapped(void) {
+	// simply re-init flash IC
+	return flash_init();
 }
 
 /**

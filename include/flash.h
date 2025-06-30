@@ -210,9 +210,13 @@ typedef struct {
 /******************** READ Related Constants ********************/
 
 
-// need 8 dummy clocks between end of address and start of data according
-// to datasheet
-#define FLASH_READ_DUMMY_CLOCKS		8
+// For the quad output read instruction (0x6B) we need 8 dummy clocks
+#define FLASH_READ_QUAD_OUTPUT_DUMMY_CLOCKS			8
+// For the quad IO instruction (0xEB) we need 4 dummy clocks
+// we also need a dummy (alternate) byte which is sent after 24-bit address
+// and before dummy clocks, check datasheet
+#define FLASH_READ_QUAD_IO_DUMMY_CLOCKS				4
+#define FLASH_READ_QUAD_IO_ALTERNATE_BYTE			0xFF
 
 
 /***************** INSTRUCTION Related Constants *****************/
@@ -275,6 +279,10 @@ DeviceStatus flash_read_reg(uint8_t regInstr, uint8_t* dest, uint32_t timeout);
 DeviceStatus flash_write_reg(uint8_t regInstr, uint8_t* value);
 DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, DevFlagOpt set, uint32_t timeout);
 DeviceStatus flash_wait_on_busy(void);
+DeviceStatus flash_enable_qspi(void);
+DeviceStatus flash_enable_memory_mapped(void);
+DeviceStatus flash_disable_memory_mapped(void);
+DeviceStatus flash_init(void);
 DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr);
 DeviceStatus flash_write_mem(uint8_t* data, uint32_t size, uint32_t addr);
 DeviceStatus flash_write_enable(void);
@@ -287,8 +295,6 @@ DeviceStatus flash_block_erase_32k(uint32_t block);
 DeviceStatus flash_block_erase_64k(uint32_t block);
 DeviceStatus flash_write_chunk(FlashChunk* chunk);
 DeviceStatus flash_read_chunk(FlashChunk* dest);
-DeviceStatus flash_enable_qspi(void);
-DeviceStatus flash_init(void);
 
 #ifdef FLASH_USE_FREERTOS
 void task_init_flash(void);

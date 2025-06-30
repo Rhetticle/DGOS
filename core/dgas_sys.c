@@ -49,7 +49,7 @@ void task_dgas_sys(void) {
 	//flash_chip_erase();
 	status = flash_write_mem(write, sizeof(write), 0x00);
 	status = flash_read_mem(read, sizeof(read), 0x00);
-	status = flash_sector_erase(0x00);
+	status = flash_block_erase_64k(0x00);
 	status = flash_read_mem(read, sizeof(read), 0x00);
 
 	for (;;) {
