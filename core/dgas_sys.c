@@ -13,6 +13,7 @@
 #include <dram.h>
 #include <flash.h>
 #include <display.h>
+#include <string.h>
 
 // Task handle of DGAS system task
 static TaskHandle_t taskHandleSys;
@@ -33,9 +34,12 @@ TaskHandle_t task_dgas_sys_get_handle(void) {
  * */
 void task_dgas_sys(void) {
 	AccelData data;
+	DeviceStatus status;
 	uint32_t count = 0;
-	uint8_t mem[64] = {0xAA};
-	uint8_t write[32] = {0xBE};
+	uint8_t did;
+	uint8_t read[32] = {0};
+	uint8_t write[32];
+	memset(write, 0xAA, sizeof(write));
 	taskENTER_CRITICAL();
 	display_init();
 	dram_init();
@@ -43,10 +47,10 @@ void task_dgas_sys(void) {
 	dram_fill_section(0, 480*480*2, 0xFF);
 	flash_init();
 	taskEXIT_CRITICAL();
-	//flash_erase_chip();
-	flash_read_mem(mem, sizeof(mem), 0x0000);
-	flash_write_mem(write, sizeof(write), 0x0000);
-	flash_read_mem(mem, sizeof(mem), 0x0000);
+	//flash_chip_erase();
+	status = flash_get_device_id(&did);
+	status = flash_write_mem(write, sizeof(write), 0x00);
+	status = flash_read_mem(read, sizeof(read), 0x00);
 
 	for (;;) {
 

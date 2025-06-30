@@ -31,6 +31,15 @@ typedef struct{
 	uint32_t id;
 }FlashChunk;
 
+typedef struct {
+	uint8_t opCode;
+	uint32_t addr;
+	uint8_t* args;
+	uint32_t argCount;
+	uint32_t expect;
+	uint32_t dummy;
+}FlashInstruction;
+
 // Pin and ports for QSPI
 #define FLASH_QSPI_NCS_PORT      	GPIOB
 #define FLASH_QSPI_NCS_PIN       	GPIO_PIN_6
@@ -212,6 +221,16 @@ typedef struct{
 #define FLASH_INSTRUCTION_NO_EXPECT	0
 #define FLASH_INSTRUCTION_NO_DUMMY	0
 
+#define FLASH_INSTRUCTION_DATA_MODE_NONE			QSPI_DATA_NONE
+#define FLASH_INSTRUCTION_DATA_MODE_SINGLE			QSPI_DATA_1_LINE
+#define FLASH_INSTRUCTION_DATA_MODE_DUAL			QSPI_DATA_2_LINES
+#define FLASH_INSTRUCTION_DATA_MODE_QUAD			QSPI_DATA_4_LINES
+
+#define FLASH_INSTRUCTION_ADDRESS_MODE_NONE			QSPI_ADDRESS_NONE
+#define FLASH_INSTRUCTION_ADDRESS_MODE_SINGLE		QSPI_ADDRESS_1_LINE
+#define FLASH_INSTRUCTION_ADDRESS_MODE_DUAL			QSPI_ADDRESS_2_LINES
+#define FLASH_INSTRUCTION_ADDRESS_MODE_QUAD			QSPI_ADDRESS_4_LINES
+
 /********************** ID Related Constants ********************/
 
 
@@ -246,13 +265,11 @@ typedef struct{
 /****************** Function Prototypes ************************/
 
 
-
 void flash_init_hardware(void);
 DeviceStatus flash_command(QSPI_CommandTypeDef* cmd);
 DeviceStatus flash_receive(uint8_t* dest, uint32_t timeout);
 DeviceStatus flash_data(uint8_t* data, uint32_t size);
-DeviceStatus flash_instruction(uint8_t instruction, uint8_t* args, uint32_t argCount,
-								uint32_t expect, uint32_t dummy);
+DeviceStatus flash_instruction(FlashInstruction* fin, uint32_t dMode, uint32_t aMode);
 DeviceStatus flash_read_info(uint8_t instruction, uint8_t* dest, uint32_t size, uint32_t timeout);
 DeviceStatus flash_read_reg(uint8_t regInstr, uint8_t* dest, uint32_t timeout);
 DeviceStatus flash_write_reg(uint8_t regInstr, uint8_t* value);
@@ -263,7 +280,7 @@ DeviceStatus flash_write_enable(void);
 DeviceStatus flash_get_device_id(uint8_t* id);
 DeviceStatus flash_get_mfr_id(uint8_t* mfr);
 DeviceStatus flash_get_jedec_id(uint16_t* jedec);
-DeviceStatus flash_erase_chip(void);
+DeviceStatus flash_chip_erase(void);
 DeviceStatus flash_write_chunk(FlashChunk* chunk);
 DeviceStatus flash_read_chunk(FlashChunk* dest);
 DeviceStatus flash_enable_qspi(void);

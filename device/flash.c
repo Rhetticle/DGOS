@@ -183,49 +183,112 @@ DeviceStatus flash_data(uint8_t* data, uint32_t size) {
 }
 
 /**
- * Issue instruction and arguments to flash IC over QSPI
+ * Issue an instruction with arguments to flash IC over QSPI
  *
- * instruction: Instruction opcode to issue
- * args: Arguments to send following command
- * argCount: Number of arguments to send
- * dummy: Number of dummy clocks needed between instruction and
- * 		  arguments
+ * fin: Flash instruction to send
+ * dMode: Data mode (e.g. FLASH_INSTRUCTION_DATA_MODE_QUAD)
  *
  * Return: Status indicating success or failure
  * */
-DeviceStatus flash_instruction(uint8_t instruction, uint8_t* args,
-								uint32_t argCount, uint32_t expect, uint32_t dummy) {
+DeviceStatus flash_instruction(FlashInstruction* fin, uint32_t dMode, uint32_t aMode) {
 	QSPI_CommandTypeDef cmd = {0};
 	DeviceStatus status;
-	uint32_t total = argCount + expect;
+	uint32_t total = fin->argCount + fin->expect;
 
-	cmd.Instruction = instruction;
-	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
-	cmd.AddressMode = QSPI_ADDRESS_NONE;
-	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
-
-	// set data mode based on whether args are present or not
-	if (total != 0) {
-		cmd.DataMode = QSPI_DATA_1_LINE;
-	} else {
-		cmd.DataMode = QSPI_DATA_NONE;
-	}
-	cmd.NbData = total;
-	cmd.DummyCycles = dummy;
+	// constant QSPI_Command settings
 	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
 	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
 	cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
+	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
+	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
+
+	// instruction setup
+	cmd.Instruction = fin->opCode;
+	// address setup
+	cmd.AddressMode = aMode;
+
+	if (aMode != FLASH_INSTRUCTION_ADDRESS_MODE_NONE) {
+		cmd.Address = fin->addr;
+		cmd.AddressSize = QSPI_ADDRESS_24_BITS; // all addresses are 24-bits
+	}
+	// data setup
+	cmd.DataMode = dMode;
+
+	if (total != 0) {
+		cmd.NbData = total;
+	}
+	cmd.DummyCycles = fin->dummy;
 
 	if ((status = flash_command(&cmd)) != DEV_OK) {
 		return status;
 	}
 
-	if (argCount != 0) {
+	if (fin->argCount != 0) {
 		// instruction has some arguments so send after command
-		if ((status = flash_data(args, argCount)) != DEV_OK) {
+		if ((status = flash_data(fin->args, fin->argCount)) != DEV_OK) {
 			return status;
 		}
 	}
+	return DEV_OK;
+}
+
+/**
+ * Read data from flash memory.
+ *
+ * dest: Destination buffer
+ * size: Number of bytes to read
+ * addr: Address to begin reading from
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr) {
+	FlashInstruction fin = {0};
+	DeviceStatus status;
+
+	fin.addr = addr;
+	fin.expect = size;
+	fin.dummy = FLASH_READ_DUMMY_CLOCKS;
+	fin.opCode = FLASH_READ_FAST_QUAD_OUTPUT;
+
+	if ((status = flash_instruction(&fin, FLASH_INSTRUCTION_DATA_MODE_QUAD,
+				FLASH_INSTRUCTION_ADDRESS_MODE_SINGLE)) != DEV_OK) {
+		return status;
+	}
+	// wait for flash to respond with data
+	if ((status = flash_receive(dest, FLASH_DATA_TIMEOUT)) != DEV_OK) {
+		return status;
+	}
+
+	return DEV_OK;
+}
+
+/**
+ * Write data to flash memory
+ *
+ * data: Data to write
+ * size: Number of bytes to write
+ * addr: Address to begin writing from
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_write_mem(uint8_t* data, uint32_t size, uint32_t addr) {
+	FlashInstruction fin = {0};
+	DeviceStatus status;
+
+	fin.addr = addr;
+	fin.args = data;
+	fin.argCount = size;
+	fin.opCode = FLASH_QUAD_INPUT_PAGE_PROGRAM;
+
+	if ((status = flash_write_enable()) != DEV_OK) {
+		return status;
+	}
+
+	if ((status = flash_instruction(&fin, FLASH_INSTRUCTION_DATA_MODE_QUAD,
+				FLASH_INSTRUCTION_ADDRESS_MODE_SINGLE)) != DEV_OK) {
+		return status;
+	}
+
 	return DEV_OK;
 }
 
@@ -239,10 +302,14 @@ DeviceStatus flash_instruction(uint8_t instruction, uint8_t* args,
  * Return: Status indicating success or failure
  * */
 DeviceStatus flash_read_info(uint8_t instruction, uint8_t* dest, uint32_t size, uint32_t timeout) {
+	FlashInstruction fin = {0};
 	DeviceStatus status;
 
-	if ((status = flash_instruction(instruction, dest, FLASH_INSTRUCTION_NO_ARGS,
-			size, FLASH_INSTRUCTION_NO_DUMMY)) != DEV_OK) {
+	fin.opCode = instruction;
+	fin.expect = size;
+
+	if ((status = flash_instruction(&fin, FLASH_INSTRUCTION_DATA_MODE_SINGLE,
+			FLASH_INSTRUCTION_ADDRESS_MODE_SINGLE)) != DEV_OK) {
 		return status;
 	}
 
@@ -274,15 +341,20 @@ DeviceStatus flash_read_reg(uint8_t regInstr, uint8_t* dest, uint32_t timeout) {
  * Return: Status indicating success or failure
  * */
 DeviceStatus flash_write_reg(uint8_t regInstr, uint8_t* value) {
+	FlashInstruction fin = {0};
 	DeviceStatus status;
+
+	fin.opCode = regInstr;
+	fin.argCount = sizeof(uint8_t);
+	fin.args = value;
 
 	// need to enable writing in order to modify register value
 	if ((status = flash_write_enable()) != DEV_OK) {
 		return status;
 	}
 	// issue instruction with arguments
-	if ((status = flash_instruction(regInstr, value, sizeof(value),
-			FLASH_INSTRUCTION_NO_EXPECT, FLASH_INSTRUCTION_NO_DUMMY)) != DEV_OK) {
+	if ((status = flash_instruction(&fin, FLASH_INSTRUCTION_DATA_MODE_SINGLE,
+			FLASH_INSTRUCTION_ADDRESS_MODE_NONE)) != DEV_OK) {
 		return status;
 	}
 	return DEV_OK;
@@ -334,90 +406,19 @@ DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, DevFlagOpt opt, u
 }
 
 /**
- * Read data from flash memory.
- *
- * dest: Destination buffer
- * size: Number of bytes to read
- * addr: Address to begin reading from
- *
- * Return: Status indicating success or failure
- * */
-DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr) {
-	QSPI_CommandTypeDef cmd = {0};
-	DeviceStatus status;
-
-	cmd.Instruction = FLASH_READ_FAST_QUAD_OUTPUT;
-	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
-	cmd.Address = addr;
-	cmd.AddressMode = QSPI_ADDRESS_1_LINE;
-	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
-	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
-	cmd.DataMode = QSPI_DATA_4_LINES;
-	cmd.DummyCycles = FLASH_READ_DUMMY_CLOCKS;
-	cmd.NbData = size;
-	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
-	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
-	cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
-
-	if ((status = flash_command(&cmd)) != DEV_OK) {
-		return status;
-	}
-
-	// wait for flash to respond with data
-	if ((status = flash_receive(dest, FLASH_DATA_TIMEOUT)) != DEV_OK) {
-		return status;
-	}
-
-	return DEV_OK;
-}
-
-/**
- * Write data to flash memory
- *
- * data: Data to write
- * size: Number of bytes to write
- * addr: Address to begin writing from
- *
- * Return: Status indicating success or failure
- * */
-DeviceStatus flash_write_mem(uint8_t* data, uint32_t size, uint32_t addr) {
-	DeviceStatus status;
-	QSPI_CommandTypeDef cmd = {0};
-
-	cmd.Instruction = FLASH_QUAD_INPUT_PAGE_PROGRAM;
-	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
-	cmd.Address = addr;
-	cmd.AddressMode = QSPI_ADDRESS_1_LINE;
-	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
-	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
-	cmd.DataMode = QSPI_DATA_4_LINES;
-	cmd.DummyCycles = 0;
-	cmd.NbData = size;
-	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
-	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
-	cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
-
-	if ((status = flash_command(&cmd)) != DEV_OK) {
-		return status;
-	}
-
-	if ((status = flash_data(data, size)) != DEV_OK) {
-		return status;
-	}
-	return DEV_OK;
-}
-
-/**
  * Issue write enable instruction to flash memory chip in preparation
  * for writing data
  *
  * Return: Status indicating success or failure
  * */
 DeviceStatus flash_write_enable(void) {
+	FlashInstruction fin = {0};
 	DeviceStatus status;
 
-	if ((status = flash_instruction(FLASH_WRITE_ENABLE, NULL, FLASH_INSTRUCTION_NO_ARGS,
-							FLASH_INSTRUCTION_NO_EXPECT, FLASH_INSTRUCTION_NO_DUMMY)) != DEV_OK) {
+	fin.opCode = FLASH_WRITE_ENABLE;
+
+	if ((status = flash_instruction(&fin, FLASH_INSTRUCTION_DATA_MODE_NONE,
+					FLASH_INSTRUCTION_ADDRESS_MODE_NONE)) != DEV_OK) {
 		return status;
 	}
 
@@ -434,29 +435,19 @@ DeviceStatus flash_write_enable(void) {
  * Return: Status indicating success or failure
  * */
 DeviceStatus flash_get_device_and_mfr_id(uint16_t* id) {
+	FlashInstruction fin = {0};
 	DeviceStatus status;
-	QSPI_CommandTypeDef cmd = {0};
 
-	cmd.Instruction = FLASH_MFR_ID;
-	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
-	// need to give address 0x0000 along with instruction
-	// check datasheet
-	cmd.Address = 0x0000;
-	cmd.AddressMode = QSPI_ADDRESS_1_LINE;
-	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
-	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
-	cmd.DataMode = QSPI_DATA_1_LINE;
-	cmd.DummyCycles = 0;
-	cmd.NbData = sizeof(uint16_t);
-	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
-	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
-	cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
+	// We must give an address of 0x000000 along with instruction
+	// to get ID, check datasheet
+	fin.opCode = FLASH_MFR_ID;
+	fin.expect = sizeof(uint16_t);
+	fin.addr = 0x000000;
 
-	// send command over QSPI
-	if ((status = flash_command(&cmd)) != DEV_OK) {
+	if ((status = flash_instruction(&fin, FLASH_INSTRUCTION_DATA_MODE_SINGLE,
+								FLASH_INSTRUCTION_ADDRESS_MODE_SINGLE)) != DEV_OK) {
 		return status;
 	}
-
 	// receive response from chip
 	if ((status = flash_receive((uint8_t*) id, 100)) != DEV_OK) {
 		return status;
@@ -532,17 +523,45 @@ DeviceStatus flash_get_jedec_id(uint16_t* jedec) {
  *
  * Return: Status indicating success or failure
  * */
-DeviceStatus flash_erase_chip(void) {
+DeviceStatus flash_chip_erase(void) {
+	FlashInstruction fin = {0};
 	DeviceStatus status;
 
-	if ((status = flash_instruction(FLASH_CHIP_ERASE, NULL, FLASH_INSTRUCTION_NO_ARGS,
-			FLASH_INSTRUCTION_NO_EXPECT, FLASH_INSTRUCTION_NO_DUMMY)) != DEV_OK) {
+	fin.opCode = FLASH_CHIP_ERASE;
+
+	// enable writing
+	if ((status = flash_write_enable()) != DEV_OK) {
 		return status;
 	}
+
+	if ((status = flash_instruction(&fin, FLASH_INSTRUCTION_DATA_MODE_NONE,
+								FLASH_INSTRUCTION_ADDRESS_MODE_NONE)) != DEV_OK) {
+		return status;
+	}
+
 	// wait for BUSY bit to clear meaning chip erase is done
 	// Chip erase may take a while so use max delay
 	return flash_wait_on_flag(FLASH_READ_STAT_REG_ONE, BUSY,
 						DEV_FLAG_OPT_CLEAR, FLASH_MAX_TIMEOUT);
+}
+
+/**
+ * Erase a given 4KiB sector in flash chip. This is the smallest
+ * erasable quantity.
+ *
+ * sector: start address of sector to erase
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_sector_erase(uint32_t sector) {
+	DeviceStatus status;
+
+	if ((status = flash_write_enable()) != DEV_OK) {
+		// couldn't enable writing
+		return status;
+	}
+
+	return DEV_OK;
 }
 
 /**
@@ -576,6 +595,7 @@ DeviceStatus flash_enable_qspi(void) {
 	DeviceStatus status;
 	uint8_t statRegTwo, statRegThree;
 
+	// read current value of status register two
 	if ((status = flash_read_reg(FLASH_READ_STAT_REG_TWO, &statRegTwo, 100)) != DEV_OK) {
 		return status;
 	}
@@ -591,6 +611,7 @@ DeviceStatus flash_enable_qspi(void) {
 	// we will set the DRV[1:0] bits of status register 3 to zero
 	// for maximum drive strength
 
+	// read current value of status register three
 	if ((status = flash_read_reg(FLASH_READ_STAT_REG_THREE, &statRegThree, 100)) != DEV_OK) {
 		return status;
 	}
