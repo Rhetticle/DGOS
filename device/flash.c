@@ -318,7 +318,7 @@ DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, DevFlagOpt opt, u
 				return DEV_TIMEOUT;
 			}
 		}
-	} else {
+	} else if (opt == DEV_FLAG_OPT_CLEAR){
 		// loop until bit is cleared or until we timeout or read fails
 		while(regVal & bit) {
 			if ((status = flash_read_reg(regInstr, &regVal, timeout)) != DEV_OK) {
@@ -353,7 +353,7 @@ DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr) {
 	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
 	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
 	cmd.DataMode = QSPI_DATA_4_LINES;
-	cmd.DummyCycles = FLASH_READ_DUMMY_CLOCKS + 2;
+	cmd.DummyCycles = FLASH_READ_DUMMY_CLOCKS;
 	cmd.NbData = size;
 	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
 	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
@@ -368,6 +368,42 @@ DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr) {
 		return status;
 	}
 
+	return DEV_OK;
+}
+
+/**
+ * Write data to flash memory
+ *
+ * data: Data to write
+ * size: Number of bytes to write
+ * addr: Address to begin writing from
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_write_mem(uint8_t* data, uint32_t size, uint32_t addr) {
+	DeviceStatus status;
+	QSPI_CommandTypeDef cmd = {0};
+
+	cmd.Instruction = FLASH_QUAD_INPUT_PAGE_PROGRAM;
+	cmd.InstructionMode = QSPI_INSTRUCTION_1_LINE;
+	cmd.Address = addr;
+	cmd.AddressMode = QSPI_ADDRESS_1_LINE;
+	cmd.AddressSize = QSPI_ADDRESS_24_BITS;
+	cmd.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
+	cmd.DataMode = QSPI_DATA_4_LINES;
+	cmd.DummyCycles = 0;
+	cmd.NbData = size;
+	cmd.DdrMode = QSPI_DDR_MODE_DISABLE;
+	cmd.DdrHoldHalfCycle = QSPI_DDR_HHC_ANALOG_DELAY;
+	cmd.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
+
+	if ((status = flash_command(&cmd)) != DEV_OK) {
+		return status;
+	}
+
+	if ((status = flash_data(data, size)) != DEV_OK) {
+		return status;
+	}
 	return DEV_OK;
 }
 
@@ -488,19 +524,6 @@ DeviceStatus flash_get_jedec_id(uint16_t* jedec) {
 	// resp[2] is lower byte of JEDEC
 
 	*jedec = (resp[1] << 8) | resp[2];
-	return DEV_OK;
-}
-
-/**
- * Write data to flash memory
- *
- * data: Data to write
- * size: Number of bytes to write
- * addr: Address to begin writing from
- *
- * Return: Status indicating success or failure
- * */
-DeviceStatus flash_write(uint8_t* data, uint32_t size, uint32_t addr) {
 	return DEV_OK;
 }
 
