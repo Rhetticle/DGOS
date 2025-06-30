@@ -274,6 +274,7 @@ DeviceStatus flash_read_info(uint8_t instruction, uint8_t* dest, uint32_t size, 
 DeviceStatus flash_read_reg(uint8_t regInstr, uint8_t* dest, uint32_t timeout);
 DeviceStatus flash_write_reg(uint8_t regInstr, uint8_t* value);
 DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, DevFlagOpt set, uint32_t timeout);
+DeviceStatus flash_wait_on_busy(void);
 DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr);
 DeviceStatus flash_write_mem(uint8_t* data, uint32_t size, uint32_t addr);
 DeviceStatus flash_write_enable(void);

@@ -406,6 +406,19 @@ DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, DevFlagOpt opt, u
 }
 
 /**
+ * Wait on busy flag of flash IC. Busy flag is set while IC is completing
+ * an internal operation such as memory write, block erase etc
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_wait_on_busy(void) {
+	// busy bit could be set for upwards of 20 seconds for long operations
+	// such as chip erase so we will use FLASH_MAX_TIMEOUT
+	return flash_wait_on_flag(FLASH_READ_STAT_REG_ONE, BUSY,
+					DEV_FLAG_OPT_CLEAR, FLASH_MAX_TIMEOUT);
+}
+
+/**
  * Enable QSPI interface of flash chip itself
  *
  * Return: Status indicating success or failure
@@ -593,8 +606,7 @@ DeviceStatus flash_chip_erase(void) {
 
 	// wait for BUSY bit to clear meaning chip erase is done
 	// Chip erase may take a while so use max delay
-	return flash_wait_on_flag(FLASH_READ_STAT_REG_ONE, BUSY,
-						DEV_FLAG_OPT_CLEAR, FLASH_MAX_TIMEOUT);
+	return flash_wait_on_busy();
 }
 
 /**
@@ -623,7 +635,7 @@ DeviceStatus flash_sector_erase(uint32_t sector) {
 		return status;
 	}
 
-	return DEV_OK;
+	return flash_wait_on_busy();
 }
 
 /**
@@ -649,7 +661,7 @@ DeviceStatus flash_block_erase_32k(uint32_t block) {
 					FLASH_INSTRUCTION_ADDRESS_MODE_SINGLE)) != DEV_OK) {
 		return status;
 	}
-	return DEV_OK;
+	return flash_wait_on_busy();
 }
 
 /**
@@ -675,7 +687,7 @@ DeviceStatus flash_block_erase_64k(uint32_t block) {
 					FLASH_INSTRUCTION_ADDRESS_MODE_SINGLE)) != DEV_OK) {
 		return status;
 	}
-	return DEV_OK;
+	return flash_wait_on_busy();
 }
 
 /**

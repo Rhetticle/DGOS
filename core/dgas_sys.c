@@ -36,7 +36,6 @@ void task_dgas_sys(void) {
 	AccelData data;
 	DeviceStatus status;
 	uint32_t count = 0;
-	uint8_t did;
 	uint8_t read[32] = {0};
 	uint8_t write[32];
 	memset(write, 0xAA, sizeof(write));
@@ -48,8 +47,9 @@ void task_dgas_sys(void) {
 	flash_init();
 	taskEXIT_CRITICAL();
 	//flash_chip_erase();
-	status = flash_get_device_id(&did);
 	status = flash_write_mem(write, sizeof(write), 0x00);
+	status = flash_read_mem(read, sizeof(read), 0x00);
+	status = flash_sector_erase(0x00);
 	status = flash_read_mem(read, sizeof(read), 0x00);
 
 	for (;;) {
