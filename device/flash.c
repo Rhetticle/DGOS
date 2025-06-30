@@ -406,6 +406,58 @@ DeviceStatus flash_wait_on_flag(uint8_t regInstr, uint8_t bit, DevFlagOpt opt, u
 }
 
 /**
+ * Enable QSPI interface of flash chip itself
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_enable_qspi(void) {
+	DeviceStatus status;
+	uint8_t statRegTwo, statRegThree;
+
+	// read current value of status register two
+	if ((status = flash_read_reg(FLASH_READ_STAT_REG_TWO, &statRegTwo, 100)) != DEV_OK) {
+		return status;
+	}
+	// have read status register two value
+	// now set QE bit to 1 to enable QSPI
+	statRegTwo |= (1 << QE);
+
+	if ((status = flash_write_reg(FLASH_WRITE_STAT_REG_TWO, &statRegTwo)) != DEV_OK) {
+		return status;
+	}
+	// next operation is optional but will increase output drive
+	// strength of IO pins of flash IC to give better rise times
+	// we will set the DRV[1:0] bits of status register 3 to zero
+	// for maximum drive strength
+
+	// read current value of status register three
+	if ((status = flash_read_reg(FLASH_READ_STAT_REG_THREE, &statRegThree, 100)) != DEV_OK) {
+		return status;
+	}
+	// clear DRV[1:0] to zero
+	statRegThree &= ~((1 << DRV0) | (1 << DRV1));
+
+	// write new value to status register three
+	if ((status = flash_write_reg(FLASH_WRITE_STAT_REG_THREE, &statRegThree)) != DEV_OK) {
+		return status;
+	}
+
+	return DEV_OK;
+}
+
+/**
+ * Initialise flash IC and related peripherals for use
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_init(void) {
+	// initialise GPIO pins and QSPI peripheral
+	flash_init_hardware();
+	// enable the flash ICs QSPI interface
+	return flash_enable_qspi();
+}
+
+/**
  * Issue write enable instruction to flash memory chip in preparation
  * for writing data
  *
@@ -554,13 +606,75 @@ DeviceStatus flash_chip_erase(void) {
  * Return: Status indicating success or failure
  * */
 DeviceStatus flash_sector_erase(uint32_t sector) {
+	FlashInstruction fin = {0};
 	DeviceStatus status;
 
+	fin.addr = sector;
+	fin.opCode = FLASH_SECTOR_ERASE;
+
+	// enable writing
 	if ((status = flash_write_enable()) != DEV_OK) {
-		// couldn't enable writing
 		return status;
 	}
 
+	// issue erase sector instruction, no data
+	if ((status = flash_instruction(&fin, FLASH_INSTRUCTION_DATA_MODE_NONE,
+					FLASH_INSTRUCTION_ADDRESS_MODE_SINGLE)) != DEV_OK) {
+		return status;
+	}
+
+	return DEV_OK;
+}
+
+/**
+ * Erase a 32KiB block from flash IC.
+ *
+ * block: Start address of block to erase
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_block_erase_32k(uint32_t block) {
+	FlashInstruction fin = {0};
+	DeviceStatus status;
+
+	fin.addr = block;
+	fin.opCode = FLASH_BLOCK_ERASE_32K;
+
+	// enable writing
+	if ((status = flash_write_enable()) != DEV_OK) {
+		return status;
+	}
+
+	if ((status = flash_instruction(&fin, FLASH_INSTRUCTION_DATA_MODE_NONE,
+					FLASH_INSTRUCTION_ADDRESS_MODE_SINGLE)) != DEV_OK) {
+		return status;
+	}
+	return DEV_OK;
+}
+
+/**
+ * Erase a 64KiB block from flash IC
+ *
+ * block: Start address of block to erase
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_block_erase_64k(uint32_t block) {
+	FlashInstruction fin = {0};
+	DeviceStatus status;
+
+	fin.addr = block;
+	fin.opCode = FLASH_BLOCK_ERASE_64K;
+
+	// enable writing
+	if ((status = flash_write_enable()) != DEV_OK) {
+		return status;
+	}
+
+	if ((status = flash_instruction(&fin, FLASH_INSTRUCTION_DATA_MODE_NONE,
+					FLASH_INSTRUCTION_ADDRESS_MODE_SINGLE)) != DEV_OK) {
+		return status;
+	}
 	return DEV_OK;
 }
 
@@ -584,58 +698,6 @@ DeviceStatus flash_write_chunk(FlashChunk* chunk) {
  * */
 DeviceStatus flash_read_chunk(FlashChunk* dest) {
 	return DEV_OK;
-}
-
-/**
- * Enable QSPI interface of flash chip itself
- *
- * Return: Status indicating success or failure
- * */
-DeviceStatus flash_enable_qspi(void) {
-	DeviceStatus status;
-	uint8_t statRegTwo, statRegThree;
-
-	// read current value of status register two
-	if ((status = flash_read_reg(FLASH_READ_STAT_REG_TWO, &statRegTwo, 100)) != DEV_OK) {
-		return status;
-	}
-	// have read status register two value
-	// now set QE bit to 1 to enable QSPI
-	statRegTwo |= (1 << QE);
-
-	if ((status = flash_write_reg(FLASH_WRITE_STAT_REG_TWO, &statRegTwo)) != DEV_OK) {
-		return status;
-	}
-	// next operation is optional but will increase output drive
-	// strength of IO pins of flash IC to give better rise times
-	// we will set the DRV[1:0] bits of status register 3 to zero
-	// for maximum drive strength
-
-	// read current value of status register three
-	if ((status = flash_read_reg(FLASH_READ_STAT_REG_THREE, &statRegThree, 100)) != DEV_OK) {
-		return status;
-	}
-	// clear DRV[1:0] to zero
-	statRegThree &= ~((1 << DRV0) | (1 << DRV1));
-
-	// write new value to status register three
-	if ((status = flash_write_reg(FLASH_WRITE_STAT_REG_THREE, &statRegThree)) != DEV_OK) {
-		return status;
-	}
-
-	return DEV_OK;
-}
-
-/**
- * Initialise flash IC and related peripherals for use
- *
- * Return: Status indicating success or failure
- * */
-DeviceStatus flash_init(void) {
-	// initialise GPIO pins and QSPI peripheral
-	flash_init_hardware();
-	// enable the flash ICs QSPI interface
-	return flash_enable_qspi();
 }
 
 #ifdef FLASH_USE_FREERTOS
