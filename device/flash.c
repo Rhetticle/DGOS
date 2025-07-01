@@ -263,6 +263,30 @@ DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr) {
 }
 
 /**
+ * Read a page (256 bytes) of data from flash.
+ *
+ * dest: Destination buffer
+ * addr: Start address of page
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_read_page(uint8_t* dest, uint32_t addr) {
+	return flash_read_mem(dest, FLASH_PAGE_SIZE, addr);
+}
+
+/**
+ * Read a sector (4KiB) of data from flash
+ *
+ * dest: Destination buffer
+ * addr: Start address of sector
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_read_sector(uint8_t* dest, uint32_t addr) {
+	return flash_read_mem(dest, FLASH_SECTOR_SIZE, addr);
+}
+
+/**
  * Write data to flash memory
  *
  * data: Data to write
@@ -290,6 +314,30 @@ DeviceStatus flash_write_mem(uint8_t* data, uint32_t size, uint32_t addr) {
 	}
 
 	return DEV_OK;
+}
+
+/**
+ * Write a page (256 bytes) of data to flash
+ *
+ * data: Data to write (must be 256 bytes long)
+ * addr: Address of page to write to
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_write_page(uint8_t* data, uint32_t addr) {
+	return flash_write_mem(data, FLASH_PAGE_SIZE, addr);
+}
+
+/**
+ * Write a sector (4 KiB) of data to flash
+ *
+ * data: Data to write (must be 4 KiB long)
+ * addr: Address of sector to write to
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_write_sector(uint8_t* data, uint32_t addr) {
+	return flash_write_mem(data, FLASH_SECTOR_SIZE, addr);
 }
 
 /**
@@ -742,6 +790,36 @@ DeviceStatus flash_block_erase_64k(uint32_t block) {
 		return status;
 	}
 	return flash_wait_on_busy();
+}
+
+/**
+ * Run a  simple self test on the external flash hardware.
+ * This does not test the entire array only a section (100 pages)
+ *
+ * pCount: Number of pages (256 byte chunks) to check starting from
+ * 		   address 0
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_self_test(uint32_t pCount) {
+	DeviceStatus status;
+	uint8_t tmp[FLASH_PAGE_SIZE];
+
+	for (uint32_t i = 0; i < pCount; i++) {
+		if ((status = flash_read_page(tmp, i * FLASH_PAGE_SIZE)) != DEV_OK) {
+			return status;
+		}
+	}
+	return DEV_OK;
+}
+
+/**
+ * Run a self test on entire memory array of external flash
+ *
+ * Return: Status indicating success or failure
+ * */
+DeviceStatus flash_self_test_entire(void) {
+	return flash_self_test(FLASH_PAGE_COUNT);
 }
 
 /**

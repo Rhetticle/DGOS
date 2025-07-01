@@ -34,11 +34,7 @@ TaskHandle_t task_dgas_sys_get_handle(void) {
  * */
 void task_dgas_sys(void) {
 	AccelData data;
-	DeviceStatus status;
 	uint32_t count = 0;
-	uint8_t read[32] = {0};
-	uint8_t write[32];
-	memset(write, 0xAA, sizeof(write));
 	taskENTER_CRITICAL();
 	display_init();
 	dram_init();
@@ -46,11 +42,7 @@ void task_dgas_sys(void) {
 	dram_fill_section(0, 480*480*2, 0xFF);
 	flash_init();
 	taskEXIT_CRITICAL();
-	//flash_chip_erase();
-	status = flash_write_mem(write, sizeof(write), 0x00);
-	status = flash_read_mem(read, sizeof(read), 0x00);
-	status = flash_block_erase_64k(0x00);
-	status = flash_read_mem(read, sizeof(read), 0x00);
+	flash_enable_memory_mapped();
 
 	for (;;) {
 

@@ -40,6 +40,13 @@ typedef struct {
 	uint32_t dummy;
 }FlashInstruction;
 
+// Memory size constants
+#define FLASH_ARRAY_SIZE			0x2000000 	// 32MiB (256MBit)
+#define FLASH_SECTOR_SIZE			0x1000		// 4KiB
+#define FLASH_PAGE_SIZE				0x100		// 256 bytes
+#define FLASH_SECTOR_COUNT			(FLASH_ARRAY_SIZE / FLASH_SECTOR_SIZE)
+#define FLASH_PAGE_COUNT			(FLASH_ARRAY_SIZE / FLASH_PAGE_SIZE)
+
 // Pin and ports for QSPI
 #define FLASH_QSPI_NCS_PORT      	GPIOB
 #define FLASH_QSPI_NCS_PIN       	GPIO_PIN_6
@@ -284,7 +291,11 @@ DeviceStatus flash_enable_memory_mapped(void);
 DeviceStatus flash_disable_memory_mapped(void);
 DeviceStatus flash_init(void);
 DeviceStatus flash_read_mem(uint8_t* dest, uint32_t size, uint32_t addr);
+DeviceStatus flash_read_page(uint8_t* dest, uint32_t addr);
+DeviceStatus flash_read_sector(uint8_t* dest, uint32_t addr);
 DeviceStatus flash_write_mem(uint8_t* data, uint32_t size, uint32_t addr);
+DeviceStatus flash_write_page(uint8_t* data, uint32_t addr);
+DeviceStatus flash_write_sector(uint8_t* data, uint32_t addr);
 DeviceStatus flash_write_enable(void);
 DeviceStatus flash_get_device_id(uint8_t* id);
 DeviceStatus flash_get_mfr_id(uint8_t* mfr);
@@ -293,6 +304,8 @@ DeviceStatus flash_chip_erase(void);
 DeviceStatus flash_sector_erase(uint32_t sector);
 DeviceStatus flash_block_erase_32k(uint32_t block);
 DeviceStatus flash_block_erase_64k(uint32_t block);
+DeviceStatus flash_self_test(uint32_t pCount);
+DeviceStatus flash_self_test_entire(void);
 DeviceStatus flash_write_chunk(FlashChunk* chunk);
 DeviceStatus flash_read_chunk(FlashChunk* dest);
 
