@@ -7,8 +7,6 @@
 
 #include <dram.h>
 #include <device.h>
-#include <FreeRTOS.h>
-#include <task.h>
 
 // DRAM controller handle
 static SDRAM_HandleTypeDef dramHandle;
@@ -136,7 +134,6 @@ void dram_init(void) {
 	cmd.ModeRegisterDefinition = 0;
 
 	HAL_SDRAM_SendCommand(&dramHandle, &cmd, 10);
-	vTaskDelay(1);
 
 	// enable precharge all (PALL)
 	cmd.CommandMode = FMC_SDRAM_CMD_PALL;
