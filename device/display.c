@@ -8,6 +8,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <display.h>
+#include <stm32f7xx.h>
 #include <dram.h>
 #include <spi.h>
 
@@ -16,6 +17,8 @@
 static SPI_HandleTypeDef lcdBus;
 // LTDC handle for LTDC peripheral being used with display
 static LTDC_HandleTypeDef lcdLTDC;
+// Handle for DMA2D peripheral being used with display
+static DMA2D_HandleTypeDef lcdDMA;
 
 /**
  * Initialise GPIO pins for SPI use for display
@@ -148,7 +151,7 @@ static void display_ltdc_gpio_init(void) {
  *
  * Return: None
  * */
-void display_ltdc_init(void) {
+static void display_ltdc_init(void) {
 	__LCD_LTDC_CLK_EN();
 	// struct to configure LTDC layers (Only one is being used)
 	LTDC_LayerCfgTypeDef config = {0};
@@ -199,6 +202,28 @@ void display_ltdc_init(void) {
 }
 
 /**
+ * Initialise DMA2D peripheral to be used with flushing
+ * frame buffers to DRAM.
+ *
+ * Return: None
+ * */
+static void display_dma2d_init(void) {
+	__LCD_DMA2D_CLK_EN();
+
+	lcdDMA.Instance = LCD_DMA2D_INSTANCE;
+	lcdDMA.Init.Mode = DMA2D_M2M;
+	lcdDMA.Init.ColorMode = DMA2D_OUTPUT_RGB565;
+	lcdDMA.Init.OutputOffset = 0;
+	lcdDMA.LayerCfg[1].InputOffset = 0;
+	lcdDMA.LayerCfg[1].InputColorMode = DMA2D_INPUT_RGB565;
+	lcdDMA.LayerCfg[1].AlphaMode = DMA2D_NO_MODIF_ALPHA;
+	lcdDMA.LayerCfg[1].InputAlpha = 0;
+
+	HAL_DMA2D_Init(&lcdDMA);
+	HAL_DMA2D_ConfigLayer(&lcdDMA, 1);
+}
+
+/**
  * Get handle of LTDC peripheral being used with display
  *
  * Return: LTDC handle of LTDC peripheral being used with display
@@ -217,6 +242,7 @@ void display_hardware_init(void) {
 	display_spi_init();
 	display_ltdc_gpio_init();
 	display_ltdc_init();
+	display_dma2d_init();
 }
 
 /**

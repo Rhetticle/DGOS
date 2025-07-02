@@ -11,6 +11,7 @@
 #include <dram.h>
 #include <flash.h>
 #include <lvgl.h>
+#include <demos/benchmark/lv_demo_benchmark.h>
 #include <buttons.h>
 #include <ui.h>
 
@@ -86,10 +87,10 @@ static void ui_flush_frame_buffer(lv_display_t* disp, const lv_area_t* area, uin
 	LTDC_HandleTypeDef* hltdc = display_get_ltdc_handle();
 	// since we're using LTDC with DMA2D we simply need to change the LTDC frame
 	// buffer pointer to the other frame buffer since double buffering is being used
-	//if(lv_display_is_double_buffered(disp) && lv_display_flush_is_last(disp)) {
+	if(lv_display_is_double_buffered(disp) && lv_display_flush_is_last(disp)) {
 		HAL_LTDC_SetAddress_NoReload(hltdc, (uint32_t) map, 0);
 	    HAL_LTDC_Reload(hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
-	//}
+	}
 	lv_display_flush_ready(disp);
 }
 
@@ -413,15 +414,15 @@ void task_lvgl_tick(void) {
 	ui_init_lvgl();
 	flash_init();
 	flash_enable_memory_mapped();
-	ui_init();
-	lv_screen_load(objects.gauge_main_ui);
-	lv_refr_now(display);
+	//ui_init();
+	lv_demo_benchmark();
+	//lv_screen_load(objects.menu);
 	//taskEXIT_CRITICAL();
 	//buttons_init();
 
 	for(;;) {
 		lv_task_handler();
-		vTaskDelay(10);
+		//vTaskDelay(10);
 	}
 }
 

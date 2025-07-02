@@ -93,6 +93,11 @@
 									  __HAL_RCC_GPIOF_CLK_ENABLE();\
 									  __HAL_RCC_GPIOG_CLK_ENABLE();}
 
+/******************************* LCD DMA2D ********************************/
+
+#define LCD_DMA2D_INSTANCE		DMA2D
+#define __LCD_DMA2D_CLK_EN()	__HAL_RCC_DMA2D_CLK_ENABLE()
+
 /**************************** Display Constants **************************/
 #define LCD_RESOLUTION_X 480
 #define LCD_RESOLUTION_Y 480
