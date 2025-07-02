@@ -39,10 +39,11 @@ void task_dgas_sys(void) {
 	display_init();
 	dram_init();
 	vTaskDelay(10);
-	dram_fill_section(0, 480*480*2, 0xFF);
+	dram_fill_section(0, 480*480*2, 0x0F);
 	flash_init();
 	taskEXIT_CRITICAL();
 	flash_enable_memory_mapped();
+	task_dgas_ui_init();
 
 	for (;;) {
 

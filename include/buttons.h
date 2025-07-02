@@ -10,7 +10,7 @@
 
 #include <dgas_types.h>
 
-extern EventGroupHandle_t eventButton;
+extern EventGroupHandle_t eventButtons;
 
 #define BTN_NAV_PORT GPIOB
 #define BTN_NAV_PIN GPIO_PIN_14

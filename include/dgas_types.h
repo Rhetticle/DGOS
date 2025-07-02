@@ -21,4 +21,6 @@
 #error "FreeRTOS not enabled, check dgas_conf.h"
 #endif
 
+#define DGAS_ATTR_FLASH			__attribute__((section(".extFlash")))
+
 #endif /* DGOS_INCLUDE_DGAS_TYPES_H_ */

@@ -7,6 +7,8 @@
 
 #include <dram.h>
 #include <device.h>
+#include <FreeRTOS.h>
+#include <task.h>
 
 // DRAM controller handle
 static SDRAM_HandleTypeDef dramHandle;
@@ -134,7 +136,7 @@ void dram_init(void) {
 	cmd.ModeRegisterDefinition = 0;
 
 	HAL_SDRAM_SendCommand(&dramHandle, &cmd, 10);
-	//vTaskDelay(1);
+	vTaskDelay(1);
 
 	// enable precharge all (PALL)
 	cmd.CommandMode = FMC_SDRAM_CMD_PALL;
@@ -155,13 +157,13 @@ void dram_init(void) {
 /**
  * Fill DRAM section with given 8-bit value
  *
- * startAddr: Start address (DRAM relative!!!!)
+ * startAddr: Start address (DRAM relative)
  * endAddr: End address
  * value: Value to fill with
  *
  * Return: None
  * */
-void dram_fill_section(uint32_t startAddr, uint32_t endAddr, uint8_t value) {
+void dram_fill_section(uint32_t startAddr, uint32_t endAddr, uint16_t value) {
 
 	if (startAddr > endAddr) {
 		return;

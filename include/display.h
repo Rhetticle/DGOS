@@ -47,7 +47,7 @@
 #define LCD_NRST_HIGH() HAL_GPIO_WritePin(LCD_NRST_PORT, LCD_NRST_PIN, 1)
 
 /******************************* LCD LTDC ********************************/
-#define LCD_LTDC_INSTANCE LTDC
+#define LCD_LTDC_INSTANCE 		LTDC
 
 // RGB666 being used so use pins x2 -> x7
 // Pins
@@ -115,6 +115,7 @@
 
 // Function prototypes
 void display_reset(void);
+LTDC_HandleTypeDef* display_get_ltdc_handle(void);
 void display_init(void);
 void sendCommand(uint8_t cmd);
 void sendData(uint8_t data);

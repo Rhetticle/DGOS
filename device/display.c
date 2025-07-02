@@ -169,8 +169,8 @@ void display_ltdc_init(void) {
 	lcdLTDC.Init.HSPolarity = LTDC_HSPOLARITY_AL;
 	lcdLTDC.Init.HorizontalSync = LCD_LTDC_HSYNC_INTERVAL;
 	lcdLTDC.Init.PCPolarity = LTDC_PCPOLARITY_IPC;
-	lcdLTDC.Init.TotalHeigh = LCD_LTDC_TOTAL_HEIGHT;
-	lcdLTDC.Init.TotalWidth = LCD_LTDC_TOTAL_WIDTH;
+	lcdLTDC.Init.TotalHeigh = LCD_LTDC_TOTAL_HEIGHT * 2;
+	lcdLTDC.Init.TotalWidth = LCD_LTDC_TOTAL_WIDTH * 2;
 	lcdLTDC.Init.VSPolarity = LTDC_VSPOLARITY_AL;
 	lcdLTDC.Init.VerticalSync = LCD_LTDC_VSYNC_INTERVAL;
 
@@ -191,11 +191,20 @@ void display_ltdc_init(void) {
 	config.ImageWidth = LCD_RESOLUTION_X;
 	config.PixelFormat = LTDC_PIXEL_FORMAT_RGB565;
 	config.WindowX0 = 0;
-	config.WindowX1 = LCD_RESOLUTION_X;
+	config.WindowX1 = LCD_RESOLUTION_X * 2;
 	config.WindowY0 = 0;
-	config.WindowY1 = LCD_RESOLUTION_Y;
+	config.WindowY1 = LCD_RESOLUTION_Y * 2;
 
 	HAL_LTDC_ConfigLayer(&lcdLTDC, &config, 0);
+}
+
+/**
+ * Get handle of LTDC peripheral being used with display
+ *
+ * Return: LTDC handle of LTDC peripheral being used with display
+ * */
+LTDC_HandleTypeDef* display_get_ltdc_handle(void) {
+	return &lcdLTDC;
 }
 
 /**

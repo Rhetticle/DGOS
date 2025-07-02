@@ -544,7 +544,7 @@ DeviceStatus flash_enable_memory_mapped(void) {
 	conf.TimeOutPeriod = 0;
 
 	if ((status = HAL_QSPI_MemoryMapped(&qspiFlash, &cmd, &conf)) != HAL_OK) {
-		return status;
+		return DEV_WRITE_ERROR;
 	}
 
 	return DEV_OK;
