@@ -11,6 +11,7 @@
 #include <dram.h>
 #include <flash.h>
 #include <lvgl.h>
+#include <ltdc.h>
 #include <demos/benchmark/lv_demo_benchmark.h>
 #include <buttons.h>
 #include <ui.h>
@@ -36,8 +37,11 @@ static UI uiGauge, uiMenu, uiMeas, uiDebug, uiDTC, uiSelfTest, uiSettings, uiAbo
  * Return: None
  * */
 
-static void ui_take_semaphore(void) {
-	xSemaphoreTake(semaphoreUI, portMAX_DELAY);
+static BaseType_t ui_take_semaphore(void) {
+	if (semaphoreUI != NULL) {
+		return xSemaphoreTake(semaphoreUI, portMAX_DELAY);
+	}
+	return pdFALSE;
 }
 
 /**
@@ -47,7 +51,9 @@ static void ui_take_semaphore(void) {
  * */
 
 static void ui_give_semaphore(void) {
-	xSemaphoreGive(semaphoreUI);
+	if (semaphoreUI != NULL) {
+		xSemaphoreGive(semaphoreUI);
+	}
 }
 
 /**
@@ -84,12 +90,12 @@ static void encoder_read(lv_indev_t* indev, lv_indev_data_t* data) {
 
 static void ui_flush_frame_buffer(lv_display_t* disp, const lv_area_t* area, uint8_t* map) {
 	// get handle of LTDC periphleral being used with disaplay
-	LTDC_HandleTypeDef* hltdc = display_get_ltdc_handle();
+	LTDC_HandleTypeDef* haltdc = display_get_ltdc_handle();
 	// since we're using LTDC with DMA2D we simply need to change the LTDC frame
 	// buffer pointer to the other frame buffer since double buffering is being used
 	if(lv_display_is_double_buffered(disp) && lv_display_flush_is_last(disp)) {
-		HAL_LTDC_SetAddress_NoReload(hltdc, (uint32_t) map, 0);
-	    HAL_LTDC_Reload(hltdc, LTDC_RELOAD_VERTICAL_BLANKING);
+		HAL_LTDC_SetAddress_NoReload(haltdc, (uint32_t) map, 0);
+	    HAL_LTDC_Reload(haltdc, LTDC_RELOAD_VERTICAL_BLANKING);
 	}
 	lv_display_flush_ready(disp);
 }
@@ -356,7 +362,7 @@ void ui_init_all_uis(void) {
 void ui_init_lvgl(void) {
 	lv_init();
 	// set LVGL tick callback
-	lv_tick_set_cb(HAL_GetTick);
+	//lv_tick_set_cb(HAL_GetTick);
 	// create display object and set start address of both frame buffers
 	display = lv_display_create(LCD_RESOLUTION_X, LCD_RESOLUTION_Y);
 #ifdef DGAS_CONFIG_USE_DOUBLE_BUFFERING
@@ -374,29 +380,32 @@ void ui_init_lvgl(void) {
 	//lv_indev_set_read_cb(indevEnc, encoder_read);
 }
 
-/**
- * Thread function for DGAS UI task
- *
- * Return: None
- * */
+void gauge_animate(void) {
+	int16_t scale = 0;
+	char buff[10];
 
-void task_dgas_ui(void) {
-	taskENTER_CRITICAL();
-	semaphoreUI = xSemaphoreCreateBinary();
-	display_init();
-	// dram_init();
-	ui_init_lvgl();
-	// EEZ init
-	ui_init();
-	// DGAS UI init
-	ui_init_all_uis();
-	ui_load_screen(&uiGauge);
-	taskEXIT_CRITICAL();
-
-	for(;;) {
-		vTaskDelay(30);
+	while(scale < 4200) {
+		sprintf(buff, "%i", scale);
+		if (ui_take_semaphore() == pdTRUE) {
+			lv_arc_set_value(objects.gauge_arc, scale);
+			lv_label_set_text(objects.param_val, buff);
+			ui_give_semaphore();
+		}
+		vTaskDelay(5);
+		scale += 100;
+	}
+	while (scale >= 0) {
+		sprintf(buff, "%i", scale);
+		if (ui_take_semaphore() == pdTRUE) {
+			lv_arc_set_value(objects.gauge_arc, scale);
+			lv_label_set_text(objects.param_val, buff);
+			ui_give_semaphore();
+		}
+		vTaskDelay(5);
+		scale -= 100;
 	}
 }
+
 
 /**
  * LVGL tick task function.
@@ -404,25 +413,48 @@ void task_dgas_ui(void) {
  * Return: None
  * */
 
-void task_lvgl_tick(void) {
-	//taskENTER_CRITICAL();
+void task_lvgl(void) {
+	for(;;) {
+		if (ui_take_semaphore() == pdTRUE) {
+			lv_task_handler();
+			ui_give_semaphore();
+		}
+		vTaskDelay(5);
+	}
+}
+
+/**
+ * Thread function for DGAS UI task
+ *
+ * Return: None
+ * */
+void task_dgas_ui(void) {
+	taskENTER_CRITICAL();
 	semaphoreUI = xSemaphoreCreateBinary();
+	ui_give_semaphore();
 	dram_init();
-	dram_fill_section(0, 480*480, 0xFFFF);
-	dram_fill_section(480*480, 480*480*2, 0xBBBB);
 	display_init();
-	ui_init_lvgl();
 	flash_init();
 	flash_enable_memory_mapped();
-	//ui_init();
-	lv_demo_benchmark();
-	//lv_screen_load(objects.menu);
-	//taskEXIT_CRITICAL();
-	//buttons_init();
+	ui_init_lvgl();
+	// EEZ init
+	ui_init();
+	taskEXIT_CRITICAL();
+	// DGAS UI init
+	//ui_init_all_uis();
+	//ui_load_screen(&uiGauge);
+	lv_screen_load(objects.gauge_main_ui);
 
 	for(;;) {
-		lv_task_handler();
-		//vTaskDelay(10);
+		gauge_animate();
+		vTaskDelay(100);
+	}
+}
+
+void task_lvgl_tick(void) {
+	for(;;) {
+		lv_tick_inc(1);
+		vTaskDelay(1);
 	}
 }
 
@@ -434,9 +466,11 @@ void task_lvgl_tick(void) {
 
 void task_dgas_ui_init(void) {
 	// create UI controller task
-	//xTaskCreate((void*) &task_dgas_ui, "TaskDgasUi", TASK_DGAS_UI_STACK_SIZE,
-	//		NULL, TASK_DGAS_UI_PRIORITY, &taskHandleDgasUi);
-	// create LVGL tick task
-	xTaskCreate((void*) &task_lvgl_tick, "TaskLVGL", TASK_DGAS_LVGL_STACK_SIZE,
+	xTaskCreate((void*) &task_dgas_ui, "TaskDgasUi", TASK_DGAS_UI_STACK_SIZE * 4,
+			NULL, TASK_DGAS_UI_PRIORITY, &taskHandleDgasUi);
+	xTaskCreate((void*) &task_lvgl, "TaskLVGL", TASK_DGAS_LVGL_STACK_SIZE,
 			NULL, TASK_DGAS_LVGL_PRIORITY, &taskHandleLVGL);
+	// create LVGL tick task
+	xTaskCreate((void*) &task_lvgl_tick, "TaskLVGLTick", 1024,
+			NULL, TASK_DGAS_LVGL_PRIORITY + 1, &taskHandleLVGL);
 }
