@@ -88,13 +88,10 @@ static void encoder_read(lv_indev_t* indev, lv_indev_data_t* data) {
  * */
 
 static void ui_flush_frame_buffer(lv_display_t* disp, const lv_area_t* area, uint8_t* map) {
-	// get handle of LTDC periphleral being used with disaplay
-	LTDC_HandleTypeDef* haltdc = display_get_ltdc_handle();
 	// since we're using LTDC with DMA2D we simply need to change the LTDC frame
 	// buffer pointer to the other frame buffer since double buffering is being used
 	if(lv_display_is_double_buffered(disp) && lv_display_flush_is_last(disp)) {
-		HAL_LTDC_SetAddress_NoReload(haltdc, (uint32_t) map, 0);
-	    HAL_LTDC_Reload(haltdc, LTDC_RELOAD_VERTICAL_BLANKING);
+		display_flush_frame_buffer(map);
 	}
 	lv_display_flush_ready(disp);
 }

@@ -10,7 +10,6 @@
 #include <display.h>
 #include <stm32f7xx.h>
 #include <dram.h>
-#include <spi.h>
 
 // SPI bus used to send data/commands to display
 // Note that the actual pixel data is sent using RGB16 bus
@@ -224,15 +223,6 @@ static void display_dma2d_init(void) {
 }
 
 /**
- * Get handle of LTDC peripheral being used with display
- *
- * Return: LTDC handle of LTDC peripheral being used with display
- * */
-LTDC_HandleTypeDef* display_get_ltdc_handle(void) {
-	return &lcdLTDC;
-}
-
-/**
  * Initialise hardware for display
  *
  * Return: None
@@ -264,12 +254,12 @@ void display_reset(void) {
  *
  * Return: None
  * */
-void sendCommand(uint8_t cmd) {
+static void sendCommand(uint8_t cmd) {
 	uint16_t send = (uint16_t) cmd;
 	LCD_CS_LOW();
 	vTaskDelay(1);
 	taskENTER_CRITICAL();
-	HAL_SPI_Transmit(&hspi1, &send, 1, 100);
+	HAL_SPI_Transmit(&lcdBus, &send, 1, 100);
 	taskEXIT_CRITICAL();
 	vTaskDelay(1);
 	LCD_CS_HIGH();
@@ -282,12 +272,12 @@ void sendCommand(uint8_t cmd) {
  *
  * Return: None
  * */
-void sendData(uint8_t data) {
+static void sendData(uint8_t data) {
 	uint16_t send = (1 << LCD_DC_BIT_POS) | data;
 	LCD_CS_LOW();
 	vTaskDelay(1);
 	taskENTER_CRITICAL();
-	HAL_SPI_Transmit(&hspi1, &send, 1, 100);
+	HAL_SPI_Transmit(&lcdBus, &send, 1, 100);
 	taskEXIT_CRITICAL();
 	vTaskDelay(1);
 	LCD_CS_HIGH();

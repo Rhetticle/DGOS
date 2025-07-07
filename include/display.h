@@ -135,9 +135,7 @@
 
 // Function prototypes
 void display_reset(void);
-LTDC_HandleTypeDef* display_get_ltdc_handle(void);
+void display_flush_frame_buffer(uint8_t* addr);
 void display_init(void);
-void sendCommand(uint8_t cmd);
-void sendData(uint8_t data);
 
 #endif /* INC_DISPLAY_H_ */
