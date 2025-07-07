@@ -11,10 +11,9 @@
 #include <dram.h>
 #include <flash.h>
 #include <lvgl.h>
-#include <ltdc.h>
-#include <demos/benchmark/lv_demo_benchmark.h>
 #include <buttons.h>
 #include <ui.h>
+#include <stdio.h>
 
 // Stores handle of UI controller task
 static TaskHandle_t taskHandleDgasUi;
@@ -366,8 +365,8 @@ void ui_init_lvgl(void) {
 	// create display object and set start address of both frame buffers
 	display = lv_display_create(LCD_RESOLUTION_X, LCD_RESOLUTION_Y);
 #ifdef DGAS_CONFIG_USE_DOUBLE_BUFFERING
-	lv_display_set_buffers(display, (void*) UI_FRAME_BUFF_ONE_ADDR, (void*) UI_FRAME_BUFF_TWO_ADDR,
-							UI_FRAME_BUFF_SIZE, LV_DISP_RENDER_MODE_DIRECT);
+	lv_display_set_buffers(display, (void*) LCD_FRAME_BUFF_ONE_ADDR, (void*) LCD_FRAME_BUFF_TWO_ADDR,
+							LCD_FRAME_BUFF_SIZE, LV_DISP_RENDER_MODE_DIRECT);
 	// set the flush callback function for LVGL
 #else
 	lv_display_set_buffers(display, (void*) UI_FRAME_BUFF_ONE_ADDR, (void*) NULL,
@@ -408,11 +407,10 @@ void gauge_animate(void) {
 
 
 /**
- * LVGL tick task function.
+ * LVGL update task function.
  *
  * Return: None
  * */
-
 void task_lvgl(void) {
 	for(;;) {
 		if (ui_take_semaphore() == pdTRUE) {
@@ -441,8 +439,6 @@ void task_dgas_ui(void) {
 	ui_init();
 	taskEXIT_CRITICAL();
 	// DGAS UI init
-	//ui_init_all_uis();
-	//ui_load_screen(&uiGauge);
 	lv_screen_load(objects.gauge_main_ui);
 
 	for(;;) {
@@ -451,6 +447,12 @@ void task_dgas_ui(void) {
 	}
 }
 
+/**
+ * LVGL tick task function. Increments LVGL's tick counter
+ * every 1ms.
+ *
+ * Return: None
+ * */
 void task_lvgl_tick(void) {
 	for(;;) {
 		lv_tick_inc(1);
@@ -466,11 +468,11 @@ void task_lvgl_tick(void) {
 
 void task_dgas_ui_init(void) {
 	// create UI controller task
-	xTaskCreate((void*) &task_dgas_ui, "TaskDgasUi", TASK_DGAS_UI_STACK_SIZE * 4,
+	xTaskCreate((void*) &task_dgas_ui, "TaskDgasUi", TASK_DGAS_UI_STACK_SIZE,
 			NULL, TASK_DGAS_UI_PRIORITY, &taskHandleDgasUi);
-	xTaskCreate((void*) &task_lvgl, "TaskLVGL", TASK_DGAS_LVGL_STACK_SIZE,
-			NULL, TASK_DGAS_LVGL_PRIORITY, &taskHandleLVGL);
+	xTaskCreate((void*) &task_lvgl, "TaskLVGL", TASK_DGAS_LVGL_UPDATE_STACK_SIZE,
+			NULL, TASK_DGAS_LVGL_UPDATE_PRIORITY, &taskHandleLVGL);
 	// create LVGL tick task
-	xTaskCreate((void*) &task_lvgl_tick, "TaskLVGLTick", 1024,
-			NULL, TASK_DGAS_LVGL_PRIORITY + 1, &taskHandleLVGL);
+	xTaskCreate((void*) &task_lvgl_tick, "TaskLVGLTick", TASK_DGAS_LVGL_TICK_STACK_SIZE,
+			NULL, TASK_DGAS_LVGL_TICK_PRIORITY, &taskHandleLVGL);
 }

@@ -9,8 +9,10 @@
 #define INC_DISPLAY_H_
 
 #include <stm32f7xx.h>
+#include <dram.h>
 
 /**************************** LCD SPI Bus ***************************/
+
 #define LCD_SPI_INSTANCE SPI1
 // LCD SPI pin definitions
 #define LCD_SPI_CLK_PORT GPIOB
@@ -47,6 +49,7 @@
 #define LCD_NRST_HIGH() HAL_GPIO_WritePin(LCD_NRST_PORT, LCD_NRST_PIN, 1)
 
 /******************************* LCD LTDC ********************************/
+
 #define LCD_LTDC_INSTANCE 		LTDC
 
 // RGB666 being used so use pins x2 -> x7
@@ -99,12 +102,14 @@
 #define __LCD_DMA2D_CLK_EN()	__HAL_RCC_DMA2D_CLK_ENABLE()
 
 /**************************** Display Constants **************************/
+
 #define LCD_RESOLUTION_X 480
 #define LCD_RESOLUTION_Y 480
 
 #define LCD_DC_BIT_POS 8
 
 /************************** LTDC Constants *******************************/
+
 #define LCD_LTDC_HSYNC_INTERVAL		3
 #define LCD_LTDC_VSYNC_INTERVAL		3
 #define LCD_LTDC_ACCUMULATED_HBP	11
@@ -115,8 +120,18 @@
 #define LCD_LTDC_TOTAL_HEIGHT		(LCD_RESOLUTION_Y + 19)
 
 /*********************** LTDC Layer Constants ****************************/
+
 #define LCD_LTDC_LAYER_ALPHA		255
 #define LCD_LTDC_LAYER_ALPHA_0		0
+
+/********************** Frame Buffer Constants **************************/
+
+// We will space the two frame buffers as far from each other as possible
+// as visual glitches can occur if they're too close.
+#define LCD_FRAME_BUFF_SIZE			(LCD_RESOLUTION_X * LCD_RESOLUTION_Y * 2)
+#define LCD_FRAME_BUFF_ONE_ADDR		DRAM_START_ADDR
+#define LCD_FRAME_BUFF_TWO_ADDR		(DRAM_START_ADDR + DRAM_SIZE - LCD_FRAME_BUFF_SIZE)
+
 
 // Function prototypes
 void display_reset(void);
