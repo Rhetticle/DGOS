@@ -371,9 +371,9 @@ void ui_init_lvgl(void) {
 #endif /* DGAS_CONFIG_USE_DOUBLE_BUFFERING */
 	lv_display_set_flush_cb(display, ui_flush_frame_buffer);
 	// create input device and set type and read callback function
-	//indevEnc = lv_indev_create();
-	//lv_indev_set_type(indevEnc, LV_INDEV_TYPE_ENCODER);
-	//lv_indev_set_read_cb(indevEnc, encoder_read);
+	indevEnc = lv_indev_create();
+	lv_indev_set_type(indevEnc, LV_INDEV_TYPE_ENCODER);
+	lv_indev_set_read_cb(indevEnc, encoder_read);
 }
 
 void gauge_animate(void) {
@@ -424,19 +424,19 @@ void task_lvgl(void) {
  * Return: None
  * */
 void task_dgas_ui(void) {
-	taskENTER_CRITICAL();
 	semaphoreUI = xSemaphoreCreateBinary();
 	ui_give_semaphore();
 	dram_init();
 	display_init();
 	flash_init();
 	flash_enable_memory_mapped();
+	task_init_buttons();
 	ui_init_lvgl();
 	// EEZ init
 	ui_init();
-	taskEXIT_CRITICAL();
-	// DGAS UI init
 	lv_screen_load(objects.gauge_main_ui);
+	task_dgas_lvgl_tick_init();
+	task_dgas_lvgl_update_init();
 
 	for(;;) {
 		gauge_animate();
@@ -458,18 +458,35 @@ void task_lvgl_tick(void) {
 }
 
 /**
- * Initialise UI controller task
+ * Initialise LVGL update/drawing task
  *
  * Return: None
  * */
-
-void task_dgas_ui_init(void) {
-	// create UI controller task
-	xTaskCreate((void*) &task_dgas_ui, "TaskDgasUi", TASK_DGAS_UI_STACK_SIZE,
-			NULL, TASK_DGAS_UI_PRIORITY, &taskHandleDgasUi);
+void task_dgas_lvgl_update_init(void) {
 	xTaskCreate((void*) &task_lvgl, "TaskLVGL", TASK_DGAS_LVGL_UPDATE_STACK_SIZE,
 			NULL, TASK_DGAS_LVGL_UPDATE_PRIORITY, &taskHandleLVGL);
+}
+
+/**
+ * Initialise LVGL tick task
+ *
+ * Return: None
+ * */
+void task_dgas_lvgl_tick_init(void) {
 	// create LVGL tick task
 	xTaskCreate((void*) &task_lvgl_tick, "TaskLVGLTick", TASK_DGAS_LVGL_TICK_STACK_SIZE,
 			NULL, TASK_DGAS_LVGL_TICK_PRIORITY, &taskHandleLVGL);
 }
+
+/**
+ * Initialise UI controller task
+ *
+ * Return: None
+ * */
+void task_dgas_ui_init(void) {
+	// create UI controller task
+	xTaskCreate((void*) &task_dgas_ui, "TaskDgasUi", TASK_DGAS_UI_STACK_SIZE,
+			NULL, TASK_DGAS_UI_PRIORITY, &taskHandleDgasUi);
+}
+
+

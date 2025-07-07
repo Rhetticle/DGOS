@@ -13,7 +13,7 @@
 
 // UI task priorities and stack sizes. If the UI task does any drawing
 // it should have a reasonably large stack as the call chain of most LVGL
-// functions is quite long. The LVGL tick task should have the high priority
+// functions is quite long. The LVGL tick task should have the highest priority
 #define TASK_DGAS_UI_STACK_SIZE 			(configMINIMAL_STACK_SIZE * 8)
 #define TASK_DGAS_UI_PRIORITY 				(tskIDLE_PRIORITY + 3)
 #define TASK_DGAS_LVGL_UPDATE_STACK_SIZE 	(configMINIMAL_STACK_SIZE * 12)
@@ -45,6 +45,8 @@ typedef enum {
 TaskHandle_t task_dgas_ui_get_handle(void);
 TaskHandle_t task_lvgl_get_handle(void);
 void ui_load_screen(UI* ui);
+void task_dgas_lvgl_update_init(void);
+void task_dgas_lvgl_tick_init(void);
 void task_dgas_ui_init(void);
 
 #endif /* INC_DGAS_UI_H_ */
