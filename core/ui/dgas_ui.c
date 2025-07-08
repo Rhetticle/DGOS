@@ -326,26 +326,24 @@ void ui_init_all_uis(void) {
 	// initialise UI structs
 	ui_init_struct(&uiGauge, objects.gauge_main_ui, NULL, 0,
 					&ui_event_callback_gauge, UI_CALLBACK_USE_FOR_SCREEN);
-
-	ui_init_struct(&uiMenu, objects.menu, menuEventable, sizeof(menuEventable),
+	ui_init_struct(&uiMenu, objects.menu, menuEventable, sizeof(menuEventable)/sizeof(lv_obj_t*),
 					&ui_event_callback_menu, UI_CALLBACK_USE_FOR_ALL);
-
-	ui_init_struct(&uiMeas, objects.measure, measEventable, sizeof(menuEventable),
+	ui_init_struct(&uiMeas, objects.measure, measEventable, sizeof(menuEventable)/sizeof(lv_obj_t*),
 					&ui_event_callback_meas, UI_CALLBACK_USE_FOR_ALL);
 
-	ui_init_struct(&uiDebug, objects.obd2_debug, debugEventable, sizeof(debugEventable),
+	ui_init_struct(&uiDebug, objects.obd2_debug, debugEventable, sizeof(debugEventable)/sizeof(lv_obj_t*),
 					&ui_event_callback_debug, UI_CALLBACK_USE_FOR_ALL);
 
-	ui_init_struct(&uiDTC, objects.diagnose, dtcEventable, sizeof(dtcEventable),
+	ui_init_struct(&uiDTC, objects.diagnose, dtcEventable, sizeof(dtcEventable)/sizeof(lv_obj_t*),
 					&ui_event_callback_dtc, UI_CALLBACK_USE_FOR_ALL);
 
-	ui_init_struct(&uiSelfTest, objects.self_test, selfTestEventable, sizeof(selfTestEventable),
+	ui_init_struct(&uiSelfTest, objects.self_test, selfTestEventable, sizeof(selfTestEventable)/sizeof(lv_obj_t*),
 					&ui_event_callback_self_test, UI_CALLBACK_USE_FOR_ALL);
 
-	ui_init_struct(&uiSettings, objects.settings, settingsEventable, sizeof(settingsEventable),
+	ui_init_struct(&uiSettings, objects.settings, settingsEventable, sizeof(settingsEventable)/sizeof(lv_obj_t*),
 					&ui_event_callback_settings, UI_CALLBACK_USE_FOR_ALL);
 
-	ui_init_struct(&uiAbout, objects.about, aboutEventable, sizeof(aboutEventable),
+	ui_init_struct(&uiAbout, objects.about, aboutEventable, sizeof(aboutEventable)/sizeof(lv_obj_t*),
 					&ui_event_callback_about, UI_CALLBACK_USE_FOR_ALL);
 }
 
@@ -373,7 +371,7 @@ void ui_init_lvgl(void) {
 	// create input device and set type and read callback function
 	indevEnc = lv_indev_create();
 	lv_indev_set_type(indevEnc, LV_INDEV_TYPE_ENCODER);
-	lv_indev_set_read_cb(indevEnc, encoder_read);
+	lv_indev_set_read_cb(indevEnc, &encoder_read);
 }
 
 void gauge_animate(void) {
@@ -434,12 +432,12 @@ void task_dgas_ui(void) {
 	ui_init_lvgl();
 	// EEZ init
 	ui_init();
-	lv_screen_load(objects.gauge_main_ui);
+	ui_init_all_uis();
+	ui_load_screen(&uiMenu);
 	task_dgas_lvgl_tick_init();
 	task_dgas_lvgl_update_init();
 
 	for(;;) {
-		gauge_animate();
 		vTaskDelay(100);
 	}
 }

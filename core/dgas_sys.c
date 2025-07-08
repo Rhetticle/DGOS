@@ -35,8 +35,7 @@ TaskHandle_t task_dgas_sys_get_handle(void) {
  * */
 void task_dgas_sys(void) {
 	AccelData data;
-	//task_dgas_ui_init();
-	task_init_buttons();
+	task_dgas_ui_init();
 
 	for (;;) {
 		if (queueAccelerometerData != NULL) {
