@@ -151,7 +151,6 @@ static void ui_event_callback_menu(lv_event_t* evt) {
  *
  * Return: None
  * */
-
 static void ui_event_callback_meas(lv_event_t* evt) {
 	lv_event_code_t code = lv_event_get_code(evt);
 
@@ -167,7 +166,6 @@ static void ui_event_callback_meas(lv_event_t* evt) {
  *
  * Return: None
  * */
-
 static void ui_event_callback_debug(lv_event_t* evt) {
 
 }
@@ -179,7 +177,6 @@ static void ui_event_callback_debug(lv_event_t* evt) {
  *
  * Return: None
  * */
-
 static void ui_event_callback_dtc(lv_event_t* evt) {
 
 }
@@ -191,7 +188,6 @@ static void ui_event_callback_dtc(lv_event_t* evt) {
  *
  * Return: None
  * */
-
 static void ui_event_callback_self_test(lv_event_t* evt) {
 
 }
@@ -203,7 +199,6 @@ static void ui_event_callback_self_test(lv_event_t* evt) {
  *
  * Return: None
  * */
-
 static void ui_event_callback_settings(lv_event_t* evt) {
 
 }
@@ -215,7 +210,6 @@ static void ui_event_callback_settings(lv_event_t* evt) {
  *
  * Return: None
  * */
-
 static void ui_event_callback_about(lv_event_t* evt) {
 
 }
@@ -225,7 +219,6 @@ static void ui_event_callback_about(lv_event_t* evt) {
  *
  * Return: Task handle of DGAS UI task
  * */
-
 TaskHandle_t task_dgas_ui_get_handle(void) {
 	return taskHandleDgasUi;
 }
@@ -235,7 +228,6 @@ TaskHandle_t task_dgas_ui_get_handle(void) {
  *
  * Return: Task handle of LVGL task
  * */
-
 TaskHandle_t task_lvgl_get_handle(void) {
 	return taskHandleLVGL;
 }
@@ -246,11 +238,8 @@ TaskHandle_t task_lvgl_get_handle(void) {
  *
  * Return: None
  * */
-
 void ui_load_screen(UI* ui) {
-	ui_take_semaphore();
 	lv_screen_load(ui->screen);
-	ui_give_semaphore();
 	lv_indev_set_group(indevEnc, ui->group);
 
 	if (ui == &uiMenu) {
@@ -272,7 +261,6 @@ void ui_load_screen(UI* ui) {
  *
  * Return: None
  * */
-
 void ui_init_struct(UI* init, lv_obj_t* scrn, lv_obj_t** eventable,
 					uint32_t size, evtCallback cb, UICallbackOpt opt) {
 	init->screen = scrn;
@@ -294,7 +282,6 @@ void ui_init_struct(UI* init, lv_obj_t* scrn, lv_obj_t** eventable,
  *
  * Return: None
  * */
-
 void ui_init_all_uis(void) {
 	// eventable/interactable objects for each UI
 	lv_obj_t* menuEventable[] 	  = {objects.measure_btn,
@@ -359,7 +346,6 @@ void ui_init_all_uis(void) {
  *
  * Return: None
  * */
-
 void ui_init_lvgl(void) {
 	lv_init();
 	// set LVGL tick callback
