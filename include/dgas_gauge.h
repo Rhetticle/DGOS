@@ -67,12 +67,28 @@ typedef struct {
 	char obdStat[GAUGE_OBD_STATUS_BUFF_LEN];
 	float vBat;
 	int paramMax;
-	GaugeParam* param;
+	const GaugeParam* param;
 }GaugeState;
 
 extern QueueHandle_t queueGaugeUpdate;
+extern EventGroupHandle_t eventGaugeParam;
 
 #define GAUGE_ARC_TICK_COUNT			7 // 7 ticks along main gauge arc
+
+// event definitions
+#define EVT_GAUGE_PARAM_RPM				1 << 0
+#define EVT_GAUGE_PARAM_SPEED			1 << 1
+#define EVT_GAUGE_PARAM_ENGINE_LOAD		1 << 2
+#define EVT_GAUGE_PARAM_COOLANT_TEMP	1 << 3
+#define EVT_GAUGE_PARAM_BOOST			1 << 4
+#define EVT_GAUGE_PARAM_INTAKE_TEMP		1 << 5
+#define EVT_GAUGE_PARAM_MAF				1 << 6
+#define EVT_GAUGE_PARAM_FUEL_PRESSURE	1 << 7
+
+#define EVT_GAUGE_PARAM					EVT_GAUGE_PARAM_RPM 			| 	EVT_GAUGE_PARAM_SPEED		 | \
+										EVT_GAUGE_PARAM_ENGINE_LOAD 	| 	EVT_GAUGE_PARAM_COOLANT_TEMP | \
+										EVT_GAUGE_PARAM_BOOST 			| 	EVT_GAUGE_PARAM_INTAKE_TEMP	 | \
+										EVT_GAUGE_PARAM_MAF				| 	EVT_GAUGE_PARAM_FUEL_PRESSURE
 
 #define TASK_DGAS_GAUGE_PRIORITY		(tskIDLE_PRIORITY + 4)
 #define TASK_DGAS_GAUGE_STACK_SIZE		(configMINIMAL_STACK_SIZE * 8)

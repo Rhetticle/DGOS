@@ -6,6 +6,7 @@
  */
 
 #include <dgas_gauge.h>
+#include <dgas_param.h>
 #include <dgas_ui.h>
 #include <ui.h>
 #include <lvgl.h>
@@ -18,6 +19,8 @@ static TaskHandle_t taskHandleGauge;
 static GaugeState gState;
 // Queue for receiving gauge updates
 QueueHandle_t queueGaugeUpdate;
+// event group for changing gauge parameters
+EventGroupHandle_t eventGaugeParam;
 
 /**
  * Get task handle of gauge task
@@ -86,24 +89,26 @@ void gauge_load_param(const GaugeParam* param) {
 
 	gState.param = param;
 	gState.paramMax = 0;
+	if (ui_take_semaphore() == pdTRUE) {
+		// update gauge arc, parameter name and units
+		lv_arc_set_range(objects.gauge_arc, param->min, param->max);
+		lv_scale_set_range(objects.gauge_scale, param->min, param->max);
+		lv_label_set_text(objects.parameter_label, param->name);
+		lv_label_set_text(objects.param_units_label, param->units);
 
-	// update gauge arc, parameter name and units
-	lv_arc_set_range(objects.gauge_arc, param->min, param->max);
-	lv_scale_set_range(objects.gauge_scale, param->min, param->max);
-	lv_label_set_text(objects.parameter_label, param->name);
-	lv_label_set_text(objects.param_units_label, param->units);
+		// update colour of colour-coded objects
+		lv_obj_set_style_arc_color(objects.gauge_arc, lv_color_hex(param->colour),
+									LV_PART_INDICATOR | LV_STATE_DEFAULT);
+		lv_obj_set_style_text_color(objects.param_val, lv_color_hex(param->colour),
+									LV_PART_MAIN | LV_STATE_DEFAULT);
+		lv_obj_set_style_text_color(objects.parameter_label, lv_color_hex(param->colour),
+									LV_PART_MAIN | LV_STATE_DEFAULT);
+		lv_obj_set_style_text_color(objects.param_max_label, lv_color_hex(param->colour),
+									LV_PART_MAIN | LV_STATE_DEFAULT);
 
-	// update colour of colour-coded objects
-    lv_obj_set_style_arc_color(objects.gauge_arc, lv_color_hex(param->colour),
-    							LV_PART_INDICATOR | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(objects.param_val, lv_color_hex(param->colour),
-    							LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(objects.parameter_label, lv_color_hex(param->colour),
-    							LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(objects.param_max_label, lv_color_hex(param->colour),
-    							LV_PART_MAIN | LV_STATE_DEFAULT);
-
-    gauge_adjust_scale_labels(param, scaleLabels);
+		gauge_adjust_scale_labels(param, scaleLabels);
+		ui_give_semaphore();
+	}
 
 }
 
@@ -121,27 +126,40 @@ void gauge_update(GaugeUpdate* update) {
 		char buff[GAUGE_PARAM_VAL_BUFF_LEN];
 		sprintf(buff, "%i", update->paramVal);
 		// parameter value has changed so update it
-		lv_arc_set_value(objects.gauge_arc, update->paramVal);
-		lv_label_set_text(objects.param_val, buff);
+		if (ui_take_semaphore() == pdTRUE) {
+			lv_arc_set_value(objects.gauge_arc, update->paramVal);
+			lv_label_set_text(objects.param_val, buff);
+			ui_give_semaphore();
+		}
 		// update state
 		gState.paramVal = update->paramVal;
 
 		if (update->paramVal > gState.paramMax) {
 			// param value has exceeded current maximum so update label
-			lv_label_set_text(objects.param_max_label, buff);
+			if (ui_take_semaphore() == pdTRUE) {
+				lv_label_set_text(objects.param_max_label, buff);
+				ui_give_semaphore();
+			}
 			gState.paramMax = update->paramVal;
 		}
 	}
 	if (strcmp(update->obdStat, gState.obdStat)) {
 		// status string is different so update it
-		lv_label_set_text(objects.obd_status_label, update->obdStat);
+		if (ui_take_semaphore() == pdTRUE) {
+			lv_label_set_text(objects.obd_status_label, update->obdStat);
+			ui_give_semaphore();
+		}
 		// update stat
 		strcpy(gState.obdStat, update->obdStat);
 	}
 	if (update->vBat != gState.vBat) {
 		char buff[GAUGE_VBAT_BUFF_LEN];
 		sprintf(buff, "%.1fV", update->vBat);
-		lv_label_set_text(objects.vbat_label, buff);
+
+		if (ui_take_semaphore() == pdTRUE) {
+			lv_label_set_text(objects.vbat_label, buff);
+			ui_give_semaphore();
+		}
 	}
 }
 
@@ -155,20 +173,54 @@ void gauge_init(void) {
 }
 
 /**
+ * Event handler for changing gauge parameter event
+ *
+ * uxBits: Event bits read from event group
+ *
+ * Return: None
+ * */
+void gauge_param_change_handler(EventBits_t uxBits) {
+	// load parameter based on event bits
+	if (uxBits & EVT_GAUGE_PARAM_RPM) {
+		gauge_load_param(&paramRPM);
+	} else if (uxBits & EVT_GAUGE_PARAM_SPEED) {
+		gauge_load_param(&paramSpeed);
+	} else if (uxBits & EVT_GAUGE_PARAM_ENGINE_LOAD) {
+		gauge_load_param(&paramEngineLoad);
+	} else if (uxBits & EVT_GAUGE_PARAM_COOLANT_TEMP) {
+		gauge_load_param(&paramCoolant);
+	} else if (uxBits & EVT_GAUGE_PARAM_BOOST) {
+		gauge_load_param(&paramBoost);
+	} else if (uxBits & EVT_GAUGE_PARAM_INTAKE_TEMP) {
+		gauge_load_param(&paramAirTemp);
+	} else if (uxBits & EVT_GAUGE_PARAM_MAF) {
+		gauge_load_param(&paramMAF);
+	} else if (uxBits & EVT_GAUGE_PARAM_FUEL_PRESSURE) {
+		gauge_load_param(&paramFuelPressure);
+	}
+}
+
+/**
  * Task function for gauge task
  *
  * Return: None
  * */
 void task_dgas_gauge(void) {
 	GaugeUpdate update = {0};
+	EventBits_t uxBits;
 	queueGaugeUpdate = xQueueCreate(1, sizeof(GaugeUpdate));
+	eventGaugeParam = xEventGroupCreate();
 	gauge_init();
+	gauge_load_param(&paramRPM);
 
 	for(;;) {
 		if (xQueueReceive(queueGaugeUpdate, &update, 10) == pdTRUE) {
 			gauge_update(&update);
 		}
-		vTaskDelay(100);
+		if ((uxBits = xEventGroupWaitBits(eventGaugeParam, EVT_GAUGE_PARAM, pdTRUE, pdFALSE, 10))) {
+			gauge_param_change_handler(uxBits);
+		}
+		vTaskDelay(10);
 	}
 }
 
