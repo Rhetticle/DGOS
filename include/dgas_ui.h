@@ -28,14 +28,6 @@ typedef struct {
 
 typedef void (*evtCallback) (lv_event_t*);
 
-typedef struct {
-	uint32_t min;
-	uint32_t max;
-	char* units;
-	char* name;
-	uint32_t colour;
-}GaugeParam;
-
 typedef enum {
 	UI_CALLBACK_USE_FOR_ALL,
 	UI_CALLBACK_USE_FOR_SCREEN
