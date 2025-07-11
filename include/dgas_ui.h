@@ -42,8 +42,11 @@ typedef enum {
 }UICallbackOpt;
 
 // Function prototypes
+BaseType_t ui_take_semaphore(void);
+void ui_give_semaphore(void);
 TaskHandle_t task_dgas_ui_get_handle(void);
-TaskHandle_t task_lvgl_get_handle(void);
+TaskHandle_t task_lvgl_update_get_handle(void);
+TaskHandle_t task_lvgl_tick_get_handle(void);
 void ui_load_screen(UI* ui);
 void task_dgas_lvgl_update_init(void);
 void task_dgas_lvgl_tick_init(void);

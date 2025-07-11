@@ -7,6 +7,7 @@
 
 #include <dgas_types.h>
 #include <dgas_ui.h>
+#include <dgas_gauge.h>
 #include <display.h>
 #include <dram.h>
 #include <flash.h>
@@ -17,8 +18,10 @@
 
 // Stores handle of UI controller task
 static TaskHandle_t taskHandleDgasUi;
-// Stores handle of LVGL task
-static TaskHandle_t taskHandleLVGL;
+// Stores handle of LVGL update task
+static TaskHandle_t taskHandleLVGLUpdate;
+// Stores handle of LVGL tick task
+static TaskHandle_t taskHandleLVGLTick;
 // semaphore to synchronise UI operations, any task which wishes to modify
 // the UI in some way must acquire this semaphore beforehand as LVGL will
 // update UI asynchronously to other tasks which can cause visual UI bugs
@@ -35,8 +38,7 @@ static UI uiGauge, uiMenu, uiMeas, uiDebug, uiDTC, uiSelfTest, uiSettings, uiAbo
  *
  * Return: None
  * */
-
-static BaseType_t ui_take_semaphore(void) {
+BaseType_t ui_take_semaphore(void) {
 	if (semaphoreUI != NULL) {
 		return xSemaphoreTake(semaphoreUI, portMAX_DELAY);
 	}
@@ -48,8 +50,7 @@ static BaseType_t ui_take_semaphore(void) {
  *
  * Return: None
  * */
-
-static void ui_give_semaphore(void) {
+void ui_give_semaphore(void) {
 	if (semaphoreUI != NULL) {
 		xSemaphoreGive(semaphoreUI);
 	}
@@ -65,7 +66,6 @@ static void ui_give_semaphore(void) {
  *
  * Return: None
  * */
-
 static void encoder_read(lv_indev_t* indev, lv_indev_data_t* data) {
 	EventBits_t uxBits = xEventGroupWaitBits(eventButtons, EVT_BUTTON_PRESSED,
 											pdTRUE, pdFALSE, 0);
@@ -86,7 +86,6 @@ static void encoder_read(lv_indev_t* indev, lv_indev_data_t* data) {
  *
  * Return: None
  * */
-
 static void ui_flush_frame_buffer(lv_display_t* disp, const lv_area_t* area, uint8_t* map) {
 	// since we're using LTDC with DMA2D we simply need to change the LTDC frame
 	// buffer pointer to the other frame buffer since double buffering is being used
@@ -103,7 +102,6 @@ static void ui_flush_frame_buffer(lv_display_t* disp, const lv_area_t* area, uin
  *
  * Return: None
  * */
-
 static void ui_event_callback_gauge(lv_event_t* evt) {
 	lv_event_code_t code = lv_event_get_code(evt);
 
@@ -120,7 +118,6 @@ static void ui_event_callback_gauge(lv_event_t* evt) {
  *
  * Return: None
  * */
-
 static void ui_event_callback_menu(lv_event_t* evt) {
 	lv_event_code_t code = lv_event_get_code(evt);
 	lv_obj_t* focused = lv_group_get_focused(lv_indev_get_group(indevEnc));
@@ -224,12 +221,21 @@ TaskHandle_t task_dgas_ui_get_handle(void) {
 }
 
 /**
- * Get task handle of LVGL task
+ * Get task handle of LVGL update task
  *
- * Return: Task handle of LVGL task
+ * Return: Task handle of LVGL update task
  * */
-TaskHandle_t task_lvgl_get_handle(void) {
-	return taskHandleLVGL;
+TaskHandle_t task_lvgl_update_get_handle(void) {
+	return taskHandleLVGLUpdate;
+}
+
+/**
+ * Get task handle of LVGL tick task
+ *
+ * Return: Task handle of LVGL tick task
+ * */
+TaskHandle_t task_lvgl_tick_get_handle(void) {
+	return taskHandleLVGLTick;
 }
 
 /**
@@ -367,33 +373,6 @@ void ui_init_lvgl(void) {
 	lv_indev_set_read_cb(indevEnc, &encoder_read);
 }
 
-void gauge_animate(void) {
-	int16_t scale = 0;
-	char buff[10];
-
-	while(scale < 4200) {
-		sprintf(buff, "%i", scale);
-		if (ui_take_semaphore() == pdTRUE) {
-			lv_arc_set_value(objects.gauge_arc, scale);
-			lv_label_set_text(objects.param_val, buff);
-			ui_give_semaphore();
-		}
-		vTaskDelay(5);
-		scale += 100;
-	}
-	while (scale >= 0) {
-		sprintf(buff, "%i", scale);
-		if (ui_take_semaphore() == pdTRUE) {
-			lv_arc_set_value(objects.gauge_arc, scale);
-			lv_label_set_text(objects.param_val, buff);
-			ui_give_semaphore();
-		}
-		vTaskDelay(5);
-		scale -= 100;
-	}
-}
-
-
 /**
  * LVGL update task function.
  *
@@ -426,9 +405,10 @@ void task_dgas_ui(void) {
 	// EEZ init
 	ui_init();
 	ui_init_all_uis();
-	ui_load_screen(&uiMenu);
+	ui_load_screen(&uiGauge);
 	task_dgas_lvgl_tick_init();
 	task_dgas_lvgl_update_init();
+	task_dgas_gauge_init();
 
 	for(;;) {
 		vTaskDelay(100);
@@ -455,7 +435,7 @@ void task_lvgl_tick(void) {
  * */
 void task_dgas_lvgl_update_init(void) {
 	xTaskCreate((void*) &task_lvgl, "TaskLVGL", TASK_DGAS_LVGL_UPDATE_STACK_SIZE,
-			NULL, TASK_DGAS_LVGL_UPDATE_PRIORITY, &taskHandleLVGL);
+			NULL, TASK_DGAS_LVGL_UPDATE_PRIORITY, &taskHandleLVGLUpdate);
 }
 
 /**
@@ -466,7 +446,7 @@ void task_dgas_lvgl_update_init(void) {
 void task_dgas_lvgl_tick_init(void) {
 	// create LVGL tick task
 	xTaskCreate((void*) &task_lvgl_tick, "TaskLVGLTick", TASK_DGAS_LVGL_TICK_STACK_SIZE,
-			NULL, TASK_DGAS_LVGL_TICK_PRIORITY, &taskHandleLVGL);
+			NULL, TASK_DGAS_LVGL_TICK_PRIORITY, &taskHandleLVGLTick);
 }
 
 /**

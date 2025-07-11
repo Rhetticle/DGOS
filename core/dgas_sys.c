@@ -9,6 +9,7 @@
 #include <dgas_sys.h>
 #include <dgas_obd.h>
 #include <dgas_ui.h>
+#include <dgas_gauge.h>
 #include <accelerometer.h>
 #include <dram.h>
 #include <flash.h>
