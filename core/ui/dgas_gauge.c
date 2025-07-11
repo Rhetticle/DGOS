@@ -62,7 +62,7 @@ void gauge_animate(void) {
  *
  * Return: None
  * */
-void gauge_adjust_scale_labels(GaugeParam* param, lv_obj_t** scaleLabels) {
+void gauge_adjust_scale_labels(const GaugeParam* param, lv_obj_t** scaleLabels) {
 	uint16_t step = (param->max - param->min) / (GAUGE_ARC_TICK_COUNT - 1);
 
 	for (int i = 0; i < GAUGE_ARC_TICK_COUNT; i++) {
@@ -79,7 +79,7 @@ void gauge_adjust_scale_labels(GaugeParam* param, lv_obj_t** scaleLabels) {
  *
  * Return: None
  * */
-void gauge_load_param(GaugeParam* param) {
+void gauge_load_param(const GaugeParam* param) {
 	lv_obj_t* scaleLabels[] = {objects.gauge_tick_0, objects.gauge_tick_1, objects.gauge_tick_2,
 							   objects.gauge_tick_3, objects.gauge_tick_4, objects.gauge_tick_5,
 							   objects.gauge_tick_6};

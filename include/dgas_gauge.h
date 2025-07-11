@@ -9,6 +9,7 @@
 #define DGOS_INCLUDE_DGAS_GAUGE_H_
 
 #include <dgas_types.h>
+#include <lvgl.h>
 
 #define GAUGE_OBD_STATUS_BUFF_LEN		10
 #define GAUGE_PARAM_VAL_BUFF_LEN		10
@@ -78,8 +79,8 @@ extern QueueHandle_t queueGaugeUpdate;
 
 TaskHandle_t task_dgas_get_handle_gauge(void);
 void gauge_animate(void);
-void gauge_adjust_scale_labels(GaugeParam* param, lv_obj_t** scaleLabels);
-void gauge_load_param(GaugeParam* param);
+void gauge_adjust_scale_labels(const GaugeParam* param, lv_obj_t** scaleLabels);
+void gauge_load_param(const GaugeParam* param);
 void gauge_update(GaugeUpdate* update);
 void gauge_init(void);
 void task_dgas_gauge_init(void);
