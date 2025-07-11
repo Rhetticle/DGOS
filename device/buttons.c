@@ -7,9 +7,6 @@
 
 #include <buttons.h>
 
-// variables to store tick for debouncing
-static uint32_t lastNav;
-static uint32_t lastSel;
 // event group for button presses
 EventGroupHandle_t eventButtons;
 
@@ -49,7 +46,7 @@ static void buttons_init(void) {
 	HAL_EXTI_SetConfigLine(&hexti, &conf);
 
 	// Enable EXTI15_10 interrupt in NVIC and set priority
-	HAL_NVIC_SetPriority(EXTI15_10_IRQn, 6, 0);
+	HAL_NVIC_SetPriority(EXTI15_10_IRQn, 12, 0);
 	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
 
@@ -63,18 +60,13 @@ static void buttons_init(void) {
 void EXTI15_10_IRQHandler(void) {
 	NVIC_ClearPendingIRQ(EXTI15_10_IRQn);
 
-	if (((EXTI->PR & EXTI_PR_PR14) == EXTI_PR_PR14) &&
-			(HAL_GetTick() > lastNav + BTN_DEBOUNCE_INTERVAL)) {
+	if ((EXTI->PR & EXTI_PR_PR14) == EXTI_PR_PR14) {
 		EXTI->PR |= EXTI_PR_PR14;
-		xEventGroupSetBitsFromISR(eventButtons, EVT_BUTTON_NAV_PRESSED, 0);
-		lastNav = HAL_GetTick();
-	} else if (((EXTI->PR & EXTI_PR_PR15) == EXTI_PR_PR15) &&
-			(HAL_GetTick() > lastSel + BTN_DEBOUNCE_INTERVAL)) {
-		EXTI->PR |= EXTI_PR_PR15;
 		xEventGroupSetBitsFromISR(eventButtons, EVT_BUTTON_SEL_PRESSED, 0);
-		lastSel = HAL_GetTick();
+	} else if ((EXTI->PR & EXTI_PR_PR15) == EXTI_PR_PR15) {
+		EXTI->PR |= EXTI_PR_PR15;
+		xEventGroupSetBitsFromISR(eventButtons, EVT_BUTTON_NAV_PRESSED, 0);
 	}
-
 }
 
 /**

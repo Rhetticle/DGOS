@@ -13,12 +13,10 @@
 extern EventGroupHandle_t eventButtons;
 
 #define BTN_NAV_PORT 			GPIOB
-#define BTN_NAV_PIN 			GPIO_PIN_14
+#define BTN_NAV_PIN 			GPIO_PIN_15
 
 #define BTN_SEL_PORT 			GPIOB
-#define BTN_SEL_PIN 			GPIO_PIN_15
-
-#define BTN_DEBOUNCE_INTERVAL 	200 // ms
+#define BTN_SEL_PIN 			GPIO_PIN_14
 
 #define EVT_BUTTON_NAV_PRESSED 	(1 << 0)
 #define EVT_BUTTON_SEL_PRESSED 	(1 << 1)

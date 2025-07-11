@@ -252,6 +252,13 @@ void ui_load_screen(UI* ui) {
 	lv_screen_load(ui->screen);
 	ui_give_semaphore();
 	lv_indev_set_group(indevEnc, ui->group);
+
+	if (ui == &uiMenu) {
+		// simple trick to focus the last selected
+		// button on the menu screen
+		lv_group_focus_prev(ui->group);
+		lv_group_focus_next(ui->group);
+	}
 }
 
 /**
