@@ -211,7 +211,6 @@ void task_dgas_gauge(void) {
 	queueGaugeUpdate = xQueueCreate(1, sizeof(GaugeUpdate));
 	eventGaugeParam = xEventGroupCreate();
 	gauge_init();
-	gauge_load_param(&paramRPM);
 
 	for(;;) {
 		if (xQueueReceive(queueGaugeUpdate, &update, 10) == pdTRUE) {

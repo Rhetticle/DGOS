@@ -7,6 +7,10 @@
 
 #include <buttons.h>
 
+// debounce tick for select button
+static uint32_t lastSel;
+// debounce tick for navigation button
+static uint32_t lastNav;
 // event group for button presses
 EventGroupHandle_t eventButtons;
 
@@ -62,10 +66,16 @@ void EXTI15_10_IRQHandler(void) {
 
 	if ((EXTI->PR & EXTI_PR_PR14) == EXTI_PR_PR14) {
 		EXTI->PR |= EXTI_PR_PR14;
-		xEventGroupSetBitsFromISR(eventButtons, EVT_BUTTON_SEL_PRESSED, 0);
+		if (HAL_GetTick() > lastNav + BTN_DEBOUNCE_INTERVAL) {
+			xEventGroupSetBitsFromISR(eventButtons, EVT_BUTTON_SEL_PRESSED, 0);
+			lastNav = HAL_GetTick();
+		}
 	} else if ((EXTI->PR & EXTI_PR_PR15) == EXTI_PR_PR15) {
 		EXTI->PR |= EXTI_PR_PR15;
-		xEventGroupSetBitsFromISR(eventButtons, EVT_BUTTON_NAV_PRESSED, 0);
+		if (HAL_GetTick() > lastSel + BTN_DEBOUNCE_INTERVAL) {
+			xEventGroupSetBitsFromISR(eventButtons, EVT_BUTTON_NAV_PRESSED, 0);
+			lastSel = HAL_GetTick();
+		}
 	}
 }
 

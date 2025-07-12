@@ -75,7 +75,11 @@ static void encoder_read(lv_indev_t* indev, lv_indev_data_t* data) {
 		data->enc_diff++;
 	}
 	if (uxBits & EVT_BUTTON_SEL_PRESSED) {
-		data->state = LV_INDEV_STATE_PRESSED;
+		if (lv_screen_active() == objects.gauge_main_ui) {
+			ui_load_screen(&uiMenu);
+		} else {
+			data->state = LV_INDEV_STATE_PRESSED;
+		}
 	} else {
 		data->state = LV_INDEV_STATE_RELEASED;
 	}
@@ -253,6 +257,9 @@ void ui_load_screen(UI* ui) {
 		// button on the menu screen
 		lv_group_focus_prev(ui->group);
 		lv_group_focus_next(ui->group);
+	} else {
+		// otherwise set focus to first object in group
+		lv_group_focus_obj(lv_group_get_obj_by_index(ui->group, 0));
 	}
 }
 
@@ -326,8 +333,10 @@ void ui_init_all_uis(void) {
 	// initialise UI structs
 	ui_init_struct(&uiGauge, objects.gauge_main_ui, NULL, 0,
 					&ui_event_callback_gauge, UI_CALLBACK_USE_FOR_SCREEN);
+
 	ui_init_struct(&uiMenu, objects.menu, menuEventable, sizeof(menuEventable)/sizeof(lv_obj_t*),
 					&ui_event_callback_menu, UI_CALLBACK_USE_FOR_ALL);
+
 	ui_init_struct(&uiMeas, objects.measure, measEventable, sizeof(menuEventable)/sizeof(lv_obj_t*),
 					&ui_event_callback_meas, UI_CALLBACK_USE_FOR_ALL);
 

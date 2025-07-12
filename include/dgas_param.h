@@ -17,19 +17,19 @@ extern const GaugeParam paramRPM, paramSpeed, paramEngineLoad, paramCoolant, par
 
 /********************* RPM ***************************/
 
-#define GAUGE_PARAM_RPM_MIN				0
-#define GAUGE_PARAM_RPM_MAX				4200
-#define GAUGE_PARAM_RPM_UNITS			"RPM"
-#define GAUGE_PARAM_RPM_NAME			"ENGINE SPEED"
-#define GAUGE_PARAM_RPM_COLOUR			0xFFFF0000U
+#define GAUGE_PARAM_RPM_MIN					0
+#define GAUGE_PARAM_RPM_MAX					4200
+#define GAUGE_PARAM_RPM_UNITS				"RPM"
+#define GAUGE_PARAM_RPM_NAME				"ENGINE SPEED"
+#define GAUGE_PARAM_RPM_COLOUR				0xFFFF0000U
 
 /**************** VEHICLE SPEED **********************/
 
-#define GAUGE_PARAM_SPEED_MIN			0
-#define GAUGE_PARAM_SPEED_MAX			150
-#define GAUGE_PARAM_SPEED_UNITS			"KM/H"
-#define GAUGE_PARAM_SPEED_NAME			"VEHICLE SPEED"
-#define GAUGE_PARAM_SPEED_COLOUR		0xFF00FFFFU
+#define GAUGE_PARAM_SPEED_MIN				0
+#define GAUGE_PARAM_SPEED_MAX				150
+#define GAUGE_PARAM_SPEED_UNITS				"KM/H"
+#define GAUGE_PARAM_SPEED_NAME				"VEHICLE SPEED"
+#define GAUGE_PARAM_SPEED_COLOUR			0xFF00FFFFU
 
 /***************** ENGINE LOAD ***********************/
 
