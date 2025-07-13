@@ -102,17 +102,6 @@ static void ui_flush_frame_buffer(lv_display_t* disp, const lv_area_t* area, uin
 }
 
 /**
- * LVGL event callback function for gauge screen.
- *
- * evt: Pointer to LVGL event object
- *
- * Return: None
- * */
-static void ui_event_callback_gauge(lv_event_t* evt) {
-	return;
-}
-
-/**
  * LVGL event callback function for menu screen.
  *
  * evt: Pointer to LVGL event object

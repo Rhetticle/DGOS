@@ -39,21 +39,21 @@ TaskHandle_t task_dgas_get_handle_gauge(void) {
 void gauge_animate(void) {
 	int16_t scale = 0;
 
-	while(scale < 4200) {
+	while(scale < GAUGE_ANIM_ARC_END_VALUE) {
 		if (ui_take_semaphore() == pdTRUE) {
 			lv_arc_set_value(objects.gauge_arc, scale);
 			ui_give_semaphore();
 		}
 		vTaskDelay(5);
-		scale += 50;
+		scale += GAUGE_ANIM_ARC_STEP_SIZE;
 	}
-	while (scale >= 0) {
+	while (scale >= GAUGE_ANIM_ARC_START_VALUE) {
 		if (ui_take_semaphore() == pdTRUE) {
 			lv_arc_set_value(objects.gauge_arc, scale);
 			ui_give_semaphore();
 		}
 		vTaskDelay(5);
-		scale -= 50;
+		scale -= GAUGE_ANIM_ARC_STEP_SIZE;
 	}
 }
 
