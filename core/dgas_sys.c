@@ -45,13 +45,6 @@ void task_dgas_sys(void) {
 			if (xQueueReceive(queueAccelerometerData, &data, 10) == pdTRUE) {
 			}
 		}
-		if (eventGaugeParam != NULL) {
-			xEventGroupSetBits(eventGaugeParam, 1 << count);
-			count++;
-			if (count == 8) {
-				count = 0;
-			}
-		}
 		vTaskDelay(200);
 	}
 }

@@ -24,6 +24,7 @@
 typedef struct {
 	lv_obj_t* screen;
 	lv_group_t* group;
+	uint32_t size;
 }UI;
 
 typedef void (*evtCallback) (lv_event_t*);
@@ -40,6 +41,8 @@ TaskHandle_t task_dgas_ui_get_handle(void);
 TaskHandle_t task_lvgl_update_get_handle(void);
 TaskHandle_t task_lvgl_tick_get_handle(void);
 void ui_load_screen(UI* ui);
+void ui_register_event_callback(UI* ui, evtCallback cb, UICallbackOpt opt);
+void ui_init_struct(UI* init, lv_obj_t* scrn, lv_obj_t** eventable, uint32_t size);
 void task_dgas_lvgl_update_init(void);
 void task_dgas_lvgl_tick_init(void);
 void task_dgas_ui_init(void);
