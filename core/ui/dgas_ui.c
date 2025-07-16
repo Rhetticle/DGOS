@@ -391,8 +391,6 @@ void ui_init_all_uis(void) {
  * */
 void ui_init_lvgl(void) {
 	lv_init();
-	// set LVGL tick callback
-	//lv_tick_set_cb(HAL_GetTick);
 	// create display object and set start address of both frame buffers
 	display = lv_display_create(LCD_RESOLUTION_X, LCD_RESOLUTION_Y);
 #ifdef DGAS_CONFIG_USE_DOUBLE_BUFFERING

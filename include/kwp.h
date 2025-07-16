@@ -18,6 +18,7 @@ extern QueueHandle_t queueKwpResponse;
 #define KWP_UART_INSTANCE DGAS_CONFIG_BUS_KWP_UART_INSTANCE
 #else
 #define KWP_UART_INSTANCE 			UART4
+#define KWP_UART_INSTANCE_IRQN		UART4_IRQn
 #define KWP_UART_TX_PORT 			GPIOC
 #define KWP_UART_TX_PIN 			GPIO_PIN_10
 #define KWP_UART_RX_PORT 			GPIOC
@@ -45,9 +46,21 @@ extern QueueHandle_t queueKwpResponse;
 #define L_LINE_PIN GPIO_PIN_10
 #endif /* DGAS_CONFIG_BUS_KWP_L_PORT */
 
+#ifdef DGAS_CONFIG_BUS_KWP_RX_BUFF_SIZE
+#define KWP_UART_RX_BUFF_SIZE		DGAS_CONFIG_BUS_KWP_RX_BUFF_SIZE
+#else
+#define KWP_UART_RX_BUFF_SIZE		64
+#endif
+
+// K and L line high and low macros. Note L-Line control circuitry is active low
+#define L_LINE_LOW()		HAL_GPIO_WritePin(L_LINE_PORT, L_LINE_PIN, 1)
+#define L_LINE_HIGH()		HAL_GPIO_WritePin(L_LINE_PORT, L_LINE_PIN, 0)
+#define K_LINE_LOW()		HAL_GPIO_WritePin(K_LINE_PORT, K_LINE_PIN, 0)
+#define K_LINE_HIGH()		HAL_GPIO_WritePin(K_LINE_PORT, K_LINE_PIN, 1)
+
 // timeout used for responses during initilisation of the bus
 // These responses can take longer
-#define KWP_BUS_INIT_TIMEOUT 2000
+#define KWP_BUS_INIT_TIMEOUT 100
 
 #define KWP_BUS_BAUD_RATE 10400
 
@@ -64,9 +77,8 @@ extern QueueHandle_t queueKwpResponse;
 #define KWP_GET_MSG_SIZE_FROM_FBYTE(fByte) ((fByte & KWP_DATA_SIZE_MASK) + KWP_HEADER_SIZE + 1)
 #define KWP_GET_CHECKSUM_FROM_MSG(msg, msgSize) (msg[msgSize - 1]) // checksum is last byte of message
 
-// this task performs time critical functionality so give it very high priority
 #define TASK_KWP_PRIORITY (tskIDLE_PRIORITY + 5)
-#define TASK_KWP_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
+#define TASK_KWP_STACK_SIZE (configMINIMAL_STACK_SIZE * 6)
 #define QUEUE_KWP_LENGTH 5
 
 typedef struct {

@@ -10,7 +10,7 @@
 #include <kwp.h>
 #include <bus.h>
 #include <string.h>
-#include "usart.h"
+#include <stdbool.h>
 
 // queue for bus requests
 QueueHandle_t queueKwpRequest;
@@ -21,6 +21,11 @@ QueueHandle_t queueKwpResponse;
 static TaskHandle_t handleKwp;
 // kwp UART bus
 static UART_HandleTypeDef kwpBus;
+// buffer for storing responses from interrupt
+static uint8_t rxBuff[KWP_UART_RX_BUFF_SIZE];
+// stores current index of RX buffer to write to
+static uint32_t rxByteCount;
+
 
 /**
  * Initialise GPIO pins required for UART for KWP bus
@@ -31,9 +36,10 @@ static void kwp_bus_gpio_init(void) {
 	__KWP_UART_GPIO_CLK_EN();
 	GPIO_InitTypeDef init = {0};
 
+	// initialise UART GPIO pins
 	init.Alternate = GPIO_AF8_UART4;
 	init.Mode = GPIO_MODE_AF_PP;
-	init.Speed = GPIO_SPEED_FAST;
+	init.Speed = GPIO_SPEED_HIGH;
 	init.Pull = GPIO_NOPULL;
 
 	init.Pin = KWP_UART_TX_PIN;
@@ -43,6 +49,15 @@ static void kwp_bus_gpio_init(void) {
 	init.Pin = KWP_UART_RX_PIN;
 
 	HAL_GPIO_Init(KWP_UART_RX_PORT, &init);
+
+	// initialise L-Line GPIO Pin
+	init.Alternate = 0;
+	init.Mode = MODE_OUTPUT;
+	init.Speed = GPIO_SPEED_HIGH;
+	init.Pull = GPIO_NOPULL;
+	init.Pin = L_LINE_PIN;
+
+	HAL_GPIO_Init(L_LINE_PORT, &init);
 }
 
 /**
@@ -81,6 +96,27 @@ static void kwp_bus_uart_init(void) {
 	kwpBus.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
 	kwpBus.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
 	HAL_UART_Init(&kwpBus);
+	// setup UART handle for receive interrupt
+	HAL_UART_Receive_IT(&kwpBus, rxBuff, sizeof(rxBuff));
+
+	HAL_NVIC_SetPriority(KWP_UART_INSTANCE_IRQN, 6, 0);
+	HAL_NVIC_EnableIRQ(KWP_UART_INSTANCE_IRQN);
+}
+
+/**
+ * Interrupt handler for KWP UART bus
+ *
+ * Return: None
+ * */
+void UART4_IRQHandler(void) {
+	if (KWP_UART_INSTANCE->ISR & USART_ISR_RXNE) {
+		rxByteCount++;
+		if (rxByteCount == sizeof(rxBuff)) {
+			rxByteCount = 0;
+		}
+		rxBuff[rxByteCount] = KWP_UART_INSTANCE->RDR;
+		KWP_UART_INSTANCE->ISR &= ~USART_ISR_RXNE;
+	}
 }
 
 /**
@@ -108,25 +144,26 @@ TaskHandle_t task_kwp_get_handle(void) {
 void kwp_bus_five_baud_init(void) {
 	// ensure K pin is setup as GPIO pin
 	kwp_bus_k_gpio();
-	HAL_GPIO_WritePin(K_LINE_PORT, K_LINE_PIN, 1);
-	HAL_GPIO_WritePin(L_LINE_PORT, L_LINE_PIN, 0);
-	HAL_GPIO_WritePin(K_LINE_PORT, K_LINE_PIN, 0);
-	HAL_GPIO_WritePin(L_LINE_PORT, L_LINE_PIN, 1);
+	K_LINE_HIGH();
+	L_LINE_HIGH();
+	vTaskDelay(1000);
+	K_LINE_LOW();
+	L_LINE_LOW();
 	vTaskDelay(205);
-	HAL_GPIO_WritePin(K_LINE_PORT, K_LINE_PIN, 1);
-	HAL_GPIO_WritePin(L_LINE_PORT, L_LINE_PIN, 0);
+	K_LINE_HIGH();
+	L_LINE_HIGH();
 	vTaskDelay(405);
-	HAL_GPIO_WritePin(K_LINE_PORT, K_LINE_PIN, 0);
-	HAL_GPIO_WritePin(L_LINE_PORT, L_LINE_PIN, 1);
+	K_LINE_LOW();
+	L_LINE_LOW();
 	vTaskDelay(405);
-	HAL_GPIO_WritePin(K_LINE_PORT, K_LINE_PIN, 1);
-	HAL_GPIO_WritePin(L_LINE_PORT, L_LINE_PIN, 0);
+	K_LINE_HIGH();
+	L_LINE_HIGH();
 	vTaskDelay(405);
-	HAL_GPIO_WritePin(K_LINE_PORT, K_LINE_PIN, 0);
-	HAL_GPIO_WritePin(L_LINE_PORT, L_LINE_PIN, 1);
+	K_LINE_LOW();
+	L_LINE_LOW();
 	vTaskDelay(405);
-	HAL_GPIO_WritePin(K_LINE_PORT, K_LINE_PIN, 1);
-	HAL_GPIO_WritePin(L_LINE_PORT, L_LINE_PIN, 0);
+	K_LINE_HIGH();
+	L_LINE_HIGH();
 	vTaskDelay(205);
 	// change K pin back to TX ready for UART communication
 	HAL_GPIO_DeInit(K_LINE_PORT, K_LINE_PIN);
@@ -143,21 +180,23 @@ void kwp_bus_five_baud_init(void) {
 BusStatus kwp_bus_write_byte(uint8_t byte) {
 	uint8_t tmp = byte;
 	uint8_t echo;
+	BusStatus status;
 
 	taskENTER_CRITICAL();
 	if (HAL_UART_Transmit(&kwpBus, &tmp, sizeof(uint8_t), 100) != HAL_OK) {
 		taskEXIT_CRITICAL();
 		return BUS_TX_ERROR;
 	}
-	// the byte we just sent will be echoed back since it's all on the K-Line so we will read it back
-	if (HAL_UART_Receive(&kwpBus, &echo, sizeof(uint8_t), 100) != HAL_OK) {
-		taskEXIT_CRITICAL();
-		return BUS_ECHO_ERROR;
-	}
 	taskEXIT_CRITICAL();
+	// the byte we just sent will be echoed back since it's all on the K-Line so we will read it back
+	/*
+	if ((status = kwp_bus_read_byte(&echo, 100)) != BUS_OK) {
+		return status;
+	}
 	if (echo != tmp) {
 		return BUS_ECHO_ERROR;
 	}
+	*/
 	return BUS_OK;
 }
 
@@ -169,12 +208,16 @@ BusStatus kwp_bus_write_byte(uint8_t byte) {
  * Return: Status indicating success or failure
  * */
 BusStatus kwp_bus_read_byte(uint8_t* dest, uint32_t timeout) {
-	taskENTER_CRITICAL();
-	if (HAL_UART_Receive(&kwpBus, dest, sizeof(uint8_t), timeout) != HAL_OK) {
-		taskEXIT_CRITICAL();
-		return BUS_RX_ERROR;
+	uint32_t tickStart = HAL_GetTick();
+
+	while (rxByteCount == 0) {
+		if (HAL_GetTick() > tickStart + timeout) {
+			return BUS_RX_ERROR;
+		}
+		vTaskDelay(1);
 	}
-	taskEXIT_CRITICAL();
+	*dest = rxBuff[rxByteCount];
+	rxByteCount--;
 	return BUS_OK;
 }
 
@@ -207,12 +250,13 @@ BusStatus kwp_bus_write(uint8_t* data, uint32_t len) {
  * Return: Status indicating success or failure
  * */
 BusStatus kwp_bus_read(uint8_t* dest, uint32_t len, uint32_t timeout) {
-	taskENTER_CRITICAL();
-	if (HAL_UART_Receive(&huart4, dest, len, timeout) != HAL_OK) {
-		taskEXIT_CRITICAL();
-		return BUS_RX_ERROR;
+	BusStatus status;
+
+	for (uint32_t i = 0; i < len; i++) {
+		if ((status = kwp_bus_read_byte(&dest[i], timeout)) != BUS_OK) {
+			return status;
+		}
 	}
-	taskEXIT_CRITICAL();
 	return BUS_OK;
 }
 
@@ -236,7 +280,8 @@ uint8_t kwp_bus_calc_checksum(uint8_t* data, uint32_t size) {
 
 /**
  * Get init response from ECU. After 5 baud init sequence, ECU will send three consecutive
- * bytes.
+ * bytes. The first byte is known as the synchronisation byte which is followed by two key
+ * word bytes.
  *
  * init: Struct to store init bytes to
  *
@@ -269,7 +314,7 @@ BusStatus kwp_bus_init(void) {
 
 	// initialise hardware
 	kwp_bus_init_hardware();
-	// perform 5 baud init sequency
+	// perform 5 baud init sequence
 	kwp_bus_five_baud_init();
 
 	if (kwp_bus_get_init_response(&init) != BUS_OK) {
@@ -307,9 +352,11 @@ static uint8_t kwp_bus_build_packet(uint8_t* dest, uint8_t* data, uint32_t size)
 	if (size > OBD_BUS_REQUEST_MAX) {
 		return 0;
 	}
+	// setup headers
 	dest[0] = KWP_HEADER_ONE;
 	dest[1] = KWP_HEADER_TWO;
 	dest[2] = KWP_HEADER_THREE;
+	// copy data after headers
 	memcpy(dest + KWP_OFFSET_DATA_START, data, size);
 
 	// add checksum to end of array
@@ -427,6 +474,7 @@ void task_kwp_bus(void) {
 
 	BusRequest req = {0};
 	BusResponse resp = {0};
+	uint8_t test = 0xAA;
 
 	queueKwpRequest = xQueueCreate(QUEUE_KWP_LENGTH, sizeof(BusRequest));
 	queueKwpResponse = xQueueCreate(QUEUE_KWP_LENGTH, sizeof(BusResponse));

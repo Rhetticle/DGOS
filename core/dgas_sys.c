@@ -17,6 +17,7 @@
 #include <string.h>
 #include <buttons.h>
 #include <stdio.h>
+#include <kwp.h>
 
 // Task handle of DGAS system task
 static TaskHandle_t taskHandleSys;
@@ -37,13 +38,13 @@ TaskHandle_t task_dgas_sys_get_handle(void) {
  * */
 void task_dgas_sys(void) {
 	AccelData data;
-	uint32_t count = 0;
 	task_dgas_ui_init();
+	//task_dgas_obd_init();
+	task_init_kwp_bus();
 
 	for (;;) {
 		if (queueAccelerometerData != NULL) {
-			if (xQueueReceive(queueAccelerometerData, &data, 10) == pdTRUE) {
-			}
+			xQueueReceive(queueAccelerometerData, &data, 10);
 		}
 		vTaskDelay(200);
 	}
