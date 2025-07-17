@@ -20,7 +20,8 @@ extern EventGroupHandle_t eventOBDChangeBus;
 
 typedef enum {
 	OBD_OK,
-	OBD_TIMEOUT
+	OBD_TIMEOUT,
+	OBD_ERROR
 }OBDStatus;
 
 // OBD modes
@@ -112,12 +113,14 @@ typedef struct {
 
 // Function prototypes
 TaskHandle_t task_dgas_obd_get_handle(void);
-float dgas_obd_pid_convert(OBDPid pid, uint8_t* data);
-BusStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t timeout);
-BusStatus dgas_obd_get_dtc(uint8_t* dest);
-BusStatus dgas_obd_get_vehicle_info(OBDPid pid, uint8_t* dest);
-void dgas_obd_handle_request(OBDRequest* req, OBDResponse* resp);
-BusStatus dgas_obd_bus_change_handler(EventBits_t uxBits);
+BaseType_t obd_take_semaphore(void);
+void obd_give_semaphore(void);
+int obd_pid_convert(OBDPid pid, uint8_t* data);
+OBDStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t timeout);
+OBDStatus dgas_obd_get_dtc(uint8_t* dest);
+OBDStatus dgas_obd_get_vehicle_info(OBDPid pid, uint8_t* dest);
+OBDStatus dgas_obd_handle_request(OBDRequest* req, OBDResponse* resp);
+OBDStatus dgas_obd_bus_change_handler(EventBits_t uxBits);
 void task_dgas_obd_init(void);
 
 #endif /* INC_DGAS_OBD_H_ */

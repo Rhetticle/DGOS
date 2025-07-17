@@ -10,12 +10,13 @@
 
 #include <dgas_types.h>
 #include <lvgl.h>
+#include <dgas_obd.h>
 
-#define GAUGE_OBD_STATUS_BUFF_LEN		10
-#define GAUGE_PARAM_VAL_BUFF_LEN		10
-#define GAUGE_VBAT_BUFF_LEN				10
-#define GAUGE_PARAM_MAX_BUFF_LEN		10
-#define GAUGE_TICK_BUFF_LEN				10
+#define GAUGE_OBD_STATUS_BUFF_LEN		32
+#define GAUGE_PARAM_VAL_BUFF_LEN		32
+#define GAUGE_VBAT_BUFF_LEN				32
+#define GAUGE_PARAM_MAX_BUFF_LEN		32
+#define GAUGE_TICK_BUFF_LEN				32
 
 /**
  * GaugeParam

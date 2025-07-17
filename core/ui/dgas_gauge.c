@@ -7,6 +7,7 @@
 
 #include <dgas_gauge.h>
 #include <dgas_param.h>
+#include <dgas_obd.h>
 #include <dgas_ui.h>
 #include <ui.h>
 #include <lvgl.h>
@@ -164,12 +165,29 @@ void gauge_update(GaugeUpdate* update) {
 }
 
 /**
+ * Set the OBD status string based on OBDStatus value
+ *
+ * dest: Destination string
+ * status: OBDStatus returned
+ *
+ * Return: None
+ * */
+void gauge_set_obd_status_string(char* dest, OBDStatus status) {
+	if (status == OBD_OK) {
+		sprintf(dest, "#00FF00 OK#");
+	} else if (status == OBD_ERROR) {
+		sprintf(dest, "#FF0000 ERROR#");
+	}
+}
+
+/**
  * Initialise gauge UI for use
  *
  * Return: None
  * */
 void gauge_init(void) {
 	gauge_animate();
+	gauge_load_param(&paramRPM);
 }
 
 /**
@@ -201,6 +219,42 @@ void gauge_param_change_handler(EventBits_t uxBits) {
 }
 
 /**
+ * Get update on a given OBD-II parameter to display on gauge
+ *
+ * update: Pointer to GaugeUpdate struct to populate
+ * pid: PID of parameter to get update on
+ * timeout: Timeout to use when waiting for response
+ *
+ * Return: 0 if successfull update was received, 1 if failure occured
+ * */
+int gauge_get_update(GaugeUpdate* update, OBDPid pid, uint32_t timeout) {
+	OBDRequest req = {0};
+	OBDResponse resp = {0};
+
+	req.mode = OBD_MODE_LIVE;
+	req.pid = pid;
+	req.timeout = timeout;
+
+	if (obd_take_semaphore() == pdTRUE) {
+		// got semaphore so send request and get response
+
+		xQueueSend(queueOBDRequest, &req, 10);
+		while(xQueueReceive(queueOBDResponse, &resp, 10) != pdTRUE) {
+			vTaskDelay(10);
+		}
+		obd_give_semaphore();
+	}
+	// update the status string based on response
+	gauge_set_obd_status_string(update->obdStat, resp.status);
+
+	if (resp.status == OBD_OK) {
+		update->paramVal = obd_pid_convert(pid, resp.data);
+		return 0;
+	}
+	return 1;
+}
+
+/**
  * Task function for gauge task
  *
  * Return: None
@@ -213,10 +267,12 @@ void task_dgas_gauge(void) {
 	gauge_init();
 
 	for(;;) {
-		if (xQueueReceive(queueGaugeUpdate, &update, 10) == pdTRUE) {
+		if (gauge_get_update(&update, OBD_PID_LIVE_ENGINE_SPEED, 100) == 0) {
+			// got successfull PID value so update gauge
 			gauge_update(&update);
 		}
 		if ((uxBits = xEventGroupWaitBits(eventGaugeParam, EVT_GAUGE_PARAM, pdTRUE, pdFALSE, 10))) {
+			// change parameter event occured
 			gauge_param_change_handler(uxBits);
 		}
 		vTaskDelay(10);

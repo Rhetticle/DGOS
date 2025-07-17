@@ -23,6 +23,8 @@
 static TaskHandle_t handleBusControl;
 // stores currently active bus being used to make OBD requests
 static BusHandle bus;
+// semaphore for exclusion to access to OBD controller
+static SemaphoreHandle_t semaphoreOBD;
 // queue for making OBD requests
 QueueHandle_t queueOBDRequest;
 // queue for sending OBD responses
@@ -40,6 +42,27 @@ TaskHandle_t task_dgas_obd_get_handle(void) {
 }
 
 /**
+ * Take OBD semaphore
+ *
+ * Return: pdTRUE if taken, pdFALSE otherwise
+ * */
+BaseType_t obd_take_semaphore(void) {
+	if (semaphoreOBD != NULL) {
+		return xSemaphoreTake(semaphoreOBD, portMAX_DELAY);
+	}
+	return pdFALSE;
+}
+
+/**
+ * Give OBD semaphore
+ *
+ * Return: None
+ * */
+void obd_give_semaphore(void) {
+	xSemaphoreGive(semaphoreOBD);
+}
+
+/**
  * Convert from the four raw OBD-II bytes (A, B, C, D) to the actual parameter
  * value depending on PID.
  *
@@ -48,11 +71,9 @@ TaskHandle_t task_dgas_obd_get_handle(void) {
  *
  * Return: Actual PID value
  * */
-float dgas_obd_pid_convert(OBDPid pid, uint8_t* data) {
+int obd_pid_convert(OBDPid pid, uint8_t* data) {
 	uint8_t A = data[0];
 	uint8_t B = data[1];
-	uint8_t C = data[2];
-	uint8_t D = data[3];
 
 	if (pid == OBD_PID_LIVE_ENGINE_SPEED) {
 		return OBD_CONV_ENGINE_SPEED(A, B);
@@ -74,6 +95,7 @@ float dgas_obd_pid_convert(OBDPid pid, uint8_t* data) {
 	} else if (pid == OBD_PID_LIVE_THROTTLE_POSITION) {
 		return OBD_CONV_THROTTLE_POSITION(A);
 	}
+	return 0;
 }
 
 /**
@@ -86,7 +108,7 @@ float dgas_obd_pid_convert(OBDPid pid, uint8_t* data) {
  *
  * Return: Status indicating success or failure
  * */
-BusStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t timeout) {
+OBDStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t timeout) {
 	BusRequest req = {0};
 	BusResponse resp = {0};
 
@@ -97,15 +119,17 @@ BusStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t tim
 
 	// send request to bus
 	xQueueSend(bus.outBound, &req, 10);
+	// wait for response, we should get a response regardless
+	// since we set a timeout on the request
 	while(xQueueReceive(bus.inBound, &resp, 10) != pdTRUE) {
 		vTaskDelay(10);
 	}
 	if (resp.status != BUS_OK) {
-		return resp.status;
+		return OBD_ERROR;
 	} else {
 		*dest = resp.data[0];
 	}
-	return BUS_OK;
+	return OBD_OK;
 }
 
 /**
@@ -115,7 +139,7 @@ BusStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t tim
  *
  * Return: Status to indicate success or failure
  * */
-BusStatus dgas_obd_get_dtc(uint8_t* dest) {
+OBDStatus dgas_obd_get_dtc(uint8_t* dest) {
 	BusRequest req = {0};
 	BusResponse resp = {0};
 
@@ -129,11 +153,11 @@ BusStatus dgas_obd_get_dtc(uint8_t* dest) {
 	}
 
 	if (resp.status != BUS_OK) {
-		return resp.status;
+		return OBD_ERROR;
 	} else {
 		memcpy(dest, resp.data, resp.dataLen);
 	}
-	return BUS_OK;
+	return OBD_OK;
 }
 
 /**
@@ -144,7 +168,7 @@ BusStatus dgas_obd_get_dtc(uint8_t* dest) {
  *
  * Return: status indicating success or failure
  * */
-BusStatus dgas_obd_get_vehicle_info(OBDPid pid, uint8_t* dest) {
+OBDStatus dgas_obd_get_vehicle_info(OBDPid pid, uint8_t* dest) {
 	return dgas_obd_get_pid(pid, OBD_MODE_VEHICLE_INFO, dest, 100);
 }
 
@@ -156,14 +180,15 @@ BusStatus dgas_obd_get_vehicle_info(OBDPid pid, uint8_t* dest) {
  *
  * Return: status indicating success or failure
  * */
-void dgas_obd_handle_request(OBDRequest* req, OBDResponse* resp) {
+OBDStatus dgas_obd_handle_request(OBDRequest* req, OBDResponse* resp) {
 	if (req->mode == OBD_MODE_LIVE) {
-		dgas_obd_get_pid(req->pid, OBD_MODE_LIVE, resp->data, req->timeout);
+		return dgas_obd_get_pid(req->pid, OBD_MODE_LIVE, resp->data, req->timeout);
 	} else if (req->mode == OBD_MODE_DTC) {
-		dgas_obd_get_dtc(resp->data);
+		return dgas_obd_get_dtc(resp->data);
 	} else if (req->mode == OBD_MODE_VEHICLE_INFO) {
-		dgas_obd_get_vehicle_info(req->pid, resp->data);
+		return dgas_obd_get_vehicle_info(req->pid, resp->data);
 	}
+	return OBD_OK;
 }
 
 /**
@@ -174,22 +199,22 @@ void dgas_obd_handle_request(OBDRequest* req, OBDResponse* resp) {
  *
  * Return: Status indicating success or failure
  * */
-BusStatus dgas_obd_bus_change_handler(EventBits_t uxBits) {
+OBDStatus dgas_obd_bus_change_handler(EventBits_t uxBits) {
 	if (uxBits & EVT_OBD_BUS_CHANGE_KWP) {
 		if (bus.bid == BUS_ID_KWP) {
 			// same bus as already being used so don't do anything
-			return BUS_OK;
+			return OBD_OK;
 		}
 		// initialise bus and set in bound and out bound queues
 		task_init_kwp_bus();
 		bus.inBound = queueKwpResponse;
 		bus.outBound = queueKwpRequest;
 	} else if (uxBits & EVT_OBD_BUS_CHANGE_9141) {
-		return BUS_OK;
+		return OBD_OK;
 	} else if (uxBits & EVT_OBD_BUS_CHANGE_CAN) {
-		return BUS_OK;
+		return OBD_OK;
 	}
-	return BUS_OK;
+	return OBD_OK;
 }
 
 /**
@@ -218,20 +243,22 @@ void task_dgas_obd(void) {
 	queueOBDResponse = xQueueCreate(TASK_BUS_CONTROL_QUEUE_LENGTH, sizeof(OBDResponse));
 	queueOBDRequest = xQueueCreate(TASK_BUS_CONTROL_QUEUE_LENGTH, sizeof(OBDRequest));
 	eventOBDChangeBus = xEventGroupCreate();
+	semaphoreOBD = xSemaphoreCreateBinary();
+	obd_give_semaphore();
 
 	for(;;) {
 		if (xQueueReceive(queueOBDRequest, &obdReq, 10) == pdTRUE) {
 			// keep track of the mode
 			obdResp.mode = obdReq.mode;
 			// got request from dgas_sys
-			dgas_obd_handle_request(&obdReq, &obdResp);
+			obdResp.status = dgas_obd_handle_request(&obdReq, &obdResp);
 			// send the response to dgas_sys
 			xQueueSend(queueOBDResponse, &obdResp, 10);
 		}
 		if ((uxBits = xEventGroupWaitBits(eventOBDChangeBus,
 				EVT_OBD_BUS_CHANGE, pdTRUE, pdFALSE, 0))) {
 			// got bus change event
-			if (dgas_obd_bus_change_handler(uxBits) != BUS_OK) {
+			if (dgas_obd_bus_change_handler(uxBits) != OBD_OK) {
 				// let dgas_sys know about failure
 			}
 		}
