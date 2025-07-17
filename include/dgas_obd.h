@@ -73,6 +73,18 @@ typedef enum {
 #define OBD_PID_VEHICLE_INFO_ECU_NAME 						  0x0A
 #define OBD_PID_VEHICLE_INFO_COMPRESSION_IGNITION_PERFORMANCE 0x0B
 
+// conversion macros from OBD-II A,B,C,D bytes to parameter value
+
+#define OBD_CONV_ENGINE_LOAD(A)			(A / 2.55)
+#define OBD_CONV_COOLANT_TEMP(A)		(A - 40)
+#define OBD_CONV_FUEL_TRIM(A)			((A / 1.28) - 100)
+#define OBD_CONV_FUEL_PRESSURE(A)		(3 * A)
+#define OBD_CONV_ENGINE_SPEED(A, B)		((256 * A + B) / 4)
+#define OBD_CONV_TIMING_ADVANCE(A)		((A / 2) - 64)
+#define OBD_CONV_INTAKE_AIR_TEMP(A)		(A - 40)
+#define OBD_CONV_MAF(A, B)				((256 * A + B) / 100)
+#define OBD_CONV_THROTTLE_POSITION(A)	(A / 2.55)
+
 typedef uint8_t OBDPid;
 
 typedef struct {
@@ -89,17 +101,18 @@ typedef struct {
 } OBDResponse;
 
 
-#define TASK_BUS_CONTROL_PRIORITY (tskIDLE_PRIORITY + 3)
-#define TASK_BUS_CONTROL_STACK_SIZE (configMINIMAL_STACK_SIZE * 4)
-#define TASK_BUS_CONTROL_QUEUE_LENGTH 5
+#define TASK_BUS_CONTROL_PRIORITY 		(tskIDLE_PRIORITY + 3)
+#define TASK_BUS_CONTROL_STACK_SIZE 	(configMINIMAL_STACK_SIZE * 4)
+#define TASK_BUS_CONTROL_QUEUE_LENGTH 	5
 
-#define EVT_OBD_BUS_CHANGE_KWP (1 << 0)
-#define EVT_OBD_BUS_CHANGE_9141 (1 << 1)
-#define EVT_OBD_BUS_CHANGE_CAN (1 << 2)
-#define EVT_OBD_BUS_CHANGE (EVT_OBD_BUS_CHANGE_KWP | EVT_OBD_BUS_CHANGE_9141 | EVT_OBD_BUS_CHANGE_CAN)
+#define EVT_OBD_BUS_CHANGE_KWP 			(1 << 0)
+#define EVT_OBD_BUS_CHANGE_9141 		(1 << 1)
+#define EVT_OBD_BUS_CHANGE_CAN 			(1 << 2)
+#define EVT_OBD_BUS_CHANGE 				(EVT_OBD_BUS_CHANGE_KWP | EVT_OBD_BUS_CHANGE_9141 | EVT_OBD_BUS_CHANGE_CAN)
 
 // Function prototypes
 TaskHandle_t task_dgas_obd_get_handle(void);
+float dgas_obd_pid_convert(OBDPid pid, uint8_t* data);
 BusStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t timeout);
 BusStatus dgas_obd_get_dtc(uint8_t* dest);
 BusStatus dgas_obd_get_vehicle_info(OBDPid pid, uint8_t* dest);

@@ -189,14 +189,13 @@ BusStatus kwp_bus_write_byte(uint8_t byte) {
 	}
 	taskEXIT_CRITICAL();
 	// the byte we just sent will be echoed back since it's all on the K-Line so we will read it back
-	/*
+
 	if ((status = kwp_bus_read_byte(&echo, 100)) != BUS_OK) {
 		return status;
 	}
 	if (echo != tmp) {
 		return BUS_ECHO_ERROR;
 	}
-	*/
 	return BUS_OK;
 }
 
@@ -204,6 +203,7 @@ BusStatus kwp_bus_write_byte(uint8_t byte) {
  * Read a single byte from KWP bus
  *
  * dest: Pointer to store data to
+ * timeout: Timeout to use when waiting
  *
  * Return: Status indicating success or failure
  * */
@@ -474,7 +474,6 @@ void task_kwp_bus(void) {
 
 	BusRequest req = {0};
 	BusResponse resp = {0};
-	uint8_t test = 0xAA;
 
 	queueKwpRequest = xQueueCreate(QUEUE_KWP_LENGTH, sizeof(BusRequest));
 	queueKwpResponse = xQueueCreate(QUEUE_KWP_LENGTH, sizeof(BusResponse));

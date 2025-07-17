@@ -38,15 +38,17 @@ TaskHandle_t task_dgas_sys_get_handle(void) {
  * */
 void task_dgas_sys(void) {
 	AccelData data;
+	OBDRequest req = {0};
+	OBDResponse resp = {0};
+
 	task_dgas_ui_init();
-	//task_dgas_obd_init();
-	task_init_kwp_bus();
+	task_dgas_obd_init();
 
 	for (;;) {
 		if (queueAccelerometerData != NULL) {
 			xQueueReceive(queueAccelerometerData, &data, 10);
 		}
-		vTaskDelay(200);
+		vTaskDelay(10);
 	}
 }
 

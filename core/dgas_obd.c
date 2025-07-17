@@ -15,6 +15,7 @@
 #include <dgas_obd.h>
 #include <kwp.h>
 #include <iso15765.h>
+#include <iso9141.h>
 #include <bus.h>
 #include <string.h>
 
@@ -36,6 +37,43 @@ EventGroupHandle_t eventOBDChangeBus;
  * */
 TaskHandle_t task_dgas_obd_get_handle(void) {
 	return handleBusControl;
+}
+
+/**
+ * Convert from the four raw OBD-II bytes (A, B, C, D) to the actual parameter
+ * value depending on PID.
+ *
+ * pid: PID to get value of
+ * data: Raw OBD-II bytes from request for PID
+ *
+ * Return: Actual PID value
+ * */
+float dgas_obd_pid_convert(OBDPid pid, uint8_t* data) {
+	uint8_t A = data[0];
+	uint8_t B = data[1];
+	uint8_t C = data[2];
+	uint8_t D = data[3];
+
+	if (pid == OBD_PID_LIVE_ENGINE_SPEED) {
+		return OBD_CONV_ENGINE_SPEED(A, B);
+	} else if (pid == OBD_PID_LIVE_COOLANT_TEMP) {
+		return OBD_CONV_COOLANT_TEMP(A);
+	} else if ((pid == OBD_PID_LIVE_LTFT_BANK_1) || (pid == OBD_PID_LIVE_LTFT_BANK_2) ||
+				(pid == OBD_PID_LIVE_STFT_BANK_1) || (pid == OBD_PID_LIVE_STFT_BANK_2)) {
+		return OBD_CONV_FUEL_TRIM(A);
+	} else if (pid == OBD_PID_LIVE_FUEL_PRESSURE) {
+		return OBD_CONV_FUEL_PRESSURE(A);
+	} else if (pid == OBD_PID_LIVE_ENGINE_LOAD) {
+		return OBD_CONV_ENGINE_LOAD(A);
+	} else if (pid == OBD_PID_LIVE_TIMING_ADVANCE) {
+		return OBD_CONV_TIMING_ADVANCE(A);
+	} else if (pid == OBD_PID_LIVE_INTAKE_AIR_TEMP) {
+		return OBD_CONV_INTAKE_AIR_TEMP(A);
+	} else if (pid == OBD_PID_LIVE_MAF_FLOW_RATE) {
+		return OBD_CONV_MAF(A, B);
+	} else if (pid == OBD_PID_LIVE_THROTTLE_POSITION) {
+		return OBD_CONV_THROTTLE_POSITION(A);
+	}
 }
 
 /**
@@ -170,8 +208,12 @@ void task_dgas_obd(void) {
 	// bus to use. For now just default to KWP
 	task_init_kwp_bus();
 
+	while((queueKwpResponse == NULL) || (queueKwpRequest == NULL)) {
+		vTaskDelay(1);
+	}
 	bus.inBound = queueKwpResponse;
 	bus.outBound = queueKwpRequest;
+	bus.bid = BUS_ID_KWP;
 
 	queueOBDResponse = xQueueCreate(TASK_BUS_CONTROL_QUEUE_LENGTH, sizeof(OBDResponse));
 	queueOBDRequest = xQueueCreate(TASK_BUS_CONTROL_QUEUE_LENGTH, sizeof(OBDRequest));
