@@ -224,7 +224,7 @@ OBDStatus dgas_obd_bus_change_handler(EventBits_t uxBits) {
  * Return: True if bus is ready, false otherwise
  * */
 bool obd_bus_ready(void) {
-	if ((bus.inBound == NULL) || (bus.outBound == NULL)) {
+	if ((*(bus.inBound) == NULL) || (*(bus.outBound) == NULL)) {
 		return false;
 	}
 	return true;
@@ -264,8 +264,7 @@ void task_dgas_obd(void) {
 				// keep track of the mode
 				obdResp.mode = obdReq.mode;
 				// got request from dgas_sys
-				// obdResp.status = dgas_obd_handle_request(&obdReq, &obdResp);
-				obdResp.status = OBD_ERROR;
+				obdResp.status = dgas_obd_handle_request(&obdReq, &obdResp);
 				obdResp.data[0] = 12;
 				obdResp.data[1] = 10;
 			}

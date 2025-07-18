@@ -152,6 +152,8 @@ void dram_init(void) {
 	HAL_SDRAM_SendCommand(&dramHandle, &cmd, 10);
 
 	HAL_SDRAM_ProgramRefreshRate(&dramHandle, DRAM_CELL_REFRESH_RATE);
+	// clear DRAM contents to 0x00 to clear any contents from previous power-up
+	dram_clear();
 }
 
 /**
@@ -164,7 +166,6 @@ void dram_init(void) {
  * Return: None
  * */
 void dram_fill_section(uint32_t startAddr, uint32_t endAddr, uint16_t value) {
-
 	if (startAddr > endAddr) {
 		return;
 	}
@@ -192,7 +193,7 @@ void dram_clear_section(uint32_t startAddr, uint32_t endAddr) {
  * */
 void dram_clear(void) {
 	// clear entire DRAM
-	dram_clear_section(DRAM_START_ADDR, DRAM_START_ADDR + DRAM_SIZE);
+	dram_clear_section(0, DRAM_SIZE - 1);
 }
 
 /**

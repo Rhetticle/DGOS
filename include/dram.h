@@ -80,7 +80,7 @@
 	     = [(64ms/4096) * 100MHz] - 20 = 1562.5 - 20 ~ 1542 */
 #define DRAM_CELL_REFRESH_RATE 			1105
 
-// DRAM size
+// DRAM size (2 MiB)
 #define DRAM_SIZE 0x200000
 // DRAM start address relative to STM32 address space
 #define DRAM_START_ADDR 0xC0000000
