@@ -7,6 +7,7 @@
 
 #include <dgas_gauge.h>
 #include <dgas_param.h>
+#include <dgas_adc.h>
 #include <dgas_obd.h>
 #include <dgas_ui.h>
 #include <string.h>
@@ -266,6 +267,7 @@ void task_dgas_gauge(void) {
 	queueGaugeUpdate = xQueueCreate(1, sizeof(GaugeUpdate));
 	eventGaugeParam = xEventGroupCreate();
 	gauge_init();
+	dgas_task_adc_init();
 
 	for(;;) {
 		if (gauge_get_update(&update, gState.param->pid, 100) == 0) {
