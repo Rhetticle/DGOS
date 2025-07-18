@@ -175,6 +175,8 @@ void gauge_set_obd_status_string(char* dest, OBDStatus status) {
 		sprintf(dest, "#00FF00 OK#");
 	} else if (status == OBD_ERROR) {
 		sprintf(dest, "#FF0000 ERROR#");
+	} else if (status == OBD_INIT) {
+		sprintf(dest, "#00FFFF INIT#");
 	}
 }
 

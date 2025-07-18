@@ -20,6 +20,7 @@ extern EventGroupHandle_t eventOBDChangeBus;
 
 typedef enum {
 	OBD_OK,
+	OBD_INIT,
 	OBD_TIMEOUT,
 	OBD_ERROR
 }OBDStatus;

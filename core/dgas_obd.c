@@ -18,6 +18,7 @@
 #include <iso9141.h>
 #include <bus.h>
 #include <string.h>
+#include <stdbool.h>
 
 // stores FreeRTOS handle of bus controller task
 static TaskHandle_t handleBusControl;
@@ -118,10 +119,10 @@ OBDStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t tim
 	req.timeout = timeout;
 
 	// send request to bus
-	xQueueSend(bus.outBound, &req, 10);
+	xQueueSend(*(bus.outBound), &req, 10);
 	// wait for response, we should get a response regardless
 	// since we set a timeout on the request
-	while(xQueueReceive(bus.inBound, &resp, 10) != pdTRUE) {
+	while(xQueueReceive(*(bus.inBound), &resp, 10) != pdTRUE) {
 		vTaskDelay(10);
 	}
 	if (resp.status != BUS_OK) {
@@ -147,8 +148,8 @@ OBDStatus dgas_obd_get_dtc(uint8_t* dest) {
 	req.dataLen = sizeof(OBD_MODE_DTC);
 
 	// send request to bus
-	xQueueSend(bus.outBound, &req, 10);
-	while(xQueueReceive(bus.inBound, &resp, 10) != pdTRUE) {
+	xQueueSend(*(bus.outBound), &req, 10);
+	while(xQueueReceive(*(bus.inBound), &resp, 10) != pdTRUE) {
 		vTaskDelay(10);
 	}
 
@@ -207,14 +208,26 @@ OBDStatus dgas_obd_bus_change_handler(EventBits_t uxBits) {
 		}
 		// initialise bus and set in bound and out bound queues
 		task_init_kwp_bus();
-		bus.inBound = queueKwpResponse;
-		bus.outBound = queueKwpRequest;
+		bus.inBound = &queueKwpResponse;
+		bus.outBound = &queueKwpRequest;
 	} else if (uxBits & EVT_OBD_BUS_CHANGE_9141) {
 		return OBD_OK;
 	} else if (uxBits & EVT_OBD_BUS_CHANGE_CAN) {
 		return OBD_OK;
 	}
 	return OBD_OK;
+}
+
+/**
+ * Check if OBD-II bus is ready for communication
+ *
+ * Return: True if bus is ready, false otherwise
+ * */
+bool obd_bus_ready(void) {
+	if ((bus.inBound == NULL) || (bus.outBound == NULL)) {
+		return false;
+	}
+	return true;
 }
 
 /**
@@ -233,11 +246,8 @@ void task_dgas_obd(void) {
 	// bus to use. For now just default to KWP
 	task_init_kwp_bus();
 
-	while((queueKwpResponse == NULL) || (queueKwpRequest == NULL)) {
-		vTaskDelay(1);
-	}
-	bus.inBound = queueKwpResponse;
-	bus.outBound = queueKwpRequest;
+	bus.inBound = &queueKwpResponse;
+	bus.outBound = &queueKwpRequest;
 	bus.bid = BUS_ID_KWP;
 
 	queueOBDResponse = xQueueCreate(TASK_BUS_CONTROL_QUEUE_LENGTH, sizeof(OBDResponse));
@@ -248,13 +258,17 @@ void task_dgas_obd(void) {
 
 	for(;;) {
 		if (xQueueReceive(queueOBDRequest, &obdReq, 10) == pdTRUE) {
-			// keep track of the mode
-			obdResp.mode = obdReq.mode;
-			// got request from dgas_sys
-			// obdResp.status = dgas_obd_handle_request(&obdReq, &obdResp);
-			obdResp.status = OBD_OK;
-			obdResp.data[0] = 12;
-			obdResp.data[1] = 10;
+			if (!obd_bus_ready()) {
+				obdResp.status = OBD_INIT;
+			} else {
+				// keep track of the mode
+				obdResp.mode = obdReq.mode;
+				// got request from dgas_sys
+				// obdResp.status = dgas_obd_handle_request(&obdReq, &obdResp);
+				obdResp.status = OBD_ERROR;
+				obdResp.data[0] = 12;
+				obdResp.data[1] = 10;
+			}
 			// send the response to dgas_sys
 			xQueueSend(queueOBDResponse, &obdResp, 10);
 		}

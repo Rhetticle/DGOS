@@ -76,13 +76,13 @@ typedef struct {
  * Stores information about an OBD bus.
  *
  * bid: Bus ID (BUS_ID_KWP etc.)
- * outBound: Queue for making requests on the bus
- * inBound: Queue for receiving responses to requests
+ * outBound: Pointer to queue for making requests on the bus
+ * inBound: Pointer to queue for receiving responses to requests
  * */
 typedef struct {
 	BusID bid;
-	QueueHandle_t outBound;
-	QueueHandle_t inBound;
+	QueueHandle_t* outBound;
+	QueueHandle_t* inBound;
 } BusHandle;
 
 #endif /* INC_BUS_H_ */
