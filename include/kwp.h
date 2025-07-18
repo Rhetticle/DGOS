@@ -99,7 +99,7 @@ BusStatus kwp_bus_get_init_response(KWPInit* init);
 BusStatus kwp_bus_init(void);
 BusStatus kwp_bus_make_request(BusRequest* req);
 void kwp_bus_extract_data(uint8_t* response, uint32_t dataSize, uint8_t* dest);
-BusStatus kwp_bus_get_response(BusResponse* resp);
+BusStatus kwp_bus_get_response(BusResponse* resp, uint32_t timeout);
 BusStatus kwp_bus_handle_request(BusRequest* busReq, BusResponse* busResp);
 void task_init_kwp_bus(void);
 

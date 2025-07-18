@@ -251,7 +251,10 @@ void task_dgas_obd(void) {
 			// keep track of the mode
 			obdResp.mode = obdReq.mode;
 			// got request from dgas_sys
-			obdResp.status = dgas_obd_handle_request(&obdReq, &obdResp);
+			// obdResp.status = dgas_obd_handle_request(&obdReq, &obdResp);
+			obdResp.status = OBD_OK;
+			obdResp.data[0] = 12;
+			obdResp.data[1] = 10;
 			// send the response to dgas_sys
 			xQueueSend(queueOBDResponse, &obdResp, 10);
 		}

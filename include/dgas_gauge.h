@@ -30,6 +30,7 @@
  * colour: Colour to use to display value/arc with
  * */
 typedef struct {
+	OBDPid pid;
 	uint32_t min;
 	uint32_t max;
 	char* units;

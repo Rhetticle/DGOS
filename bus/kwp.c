@@ -409,12 +409,12 @@ void kwp_bus_extract_data(uint8_t* response, uint32_t dataSize, uint8_t* dest) {
  *
  * Return: Status indicating success or failure
  * */
-BusStatus kwp_bus_get_response(BusResponse* resp) {
+BusStatus kwp_bus_get_response(BusResponse* resp, uint32_t timeout) {
 	uint8_t fByte, remain, msgSize;
 	uint8_t msg[OBD_BUS_RESPONSE_MAX];
 	BusStatus status;
 
-	if ((status = kwp_bus_read(msg, sizeof(uint8_t), 100)) != BUS_OK) {
+	if ((status = kwp_bus_read(msg, sizeof(uint8_t), timeout)) != BUS_OK) {
 		return status;
 	}
 
@@ -428,7 +428,7 @@ BusStatus kwp_bus_get_response(BusResponse* resp) {
 	}
 
 	// we've read the format byte so store remaining starting from msg + 1
-	if ((status = kwp_bus_read(msg + 1, remain, 100)) != BUS_OK) {
+	if ((status = kwp_bus_read(msg + 1, remain, timeout)) != BUS_OK) {
 			return status;
 	}
 	uint8_t checksum = KWP_GET_CHECKSUM_FROM_MSG(msg, msgSize);
@@ -455,7 +455,7 @@ BusStatus kwp_bus_handle_request(BusRequest* busReq, BusResponse* busResp) {
 		return status;
 	}
 
-	if ((status = kwp_bus_get_response(busResp)) != BUS_OK) {
+	if ((status = kwp_bus_get_response(busResp, busReq->timeout)) != BUS_OK) {
 		return status;
 	}
 
@@ -468,9 +468,9 @@ BusStatus kwp_bus_handle_request(BusRequest* busReq, BusResponse* busResp) {
  * Return: None
  * */
 void task_kwp_bus(void) {
-	while(kwp_bus_init() != BUS_OK) {
-		vTaskDelay(100);
-	}
+	//while(kwp_bus_init() != BUS_OK) {
+	//	vTaskDelay(100);
+	//}
 	BusRequest req = {0};
 	BusResponse resp = {0};
 

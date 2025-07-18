@@ -9,8 +9,6 @@
 #include <dgas_param.h>
 #include <dgas_obd.h>
 #include <dgas_ui.h>
-#include <ui.h>
-#include <lvgl.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -243,12 +241,13 @@ int gauge_get_update(GaugeUpdate* update, OBDPid pid, uint32_t timeout) {
 			vTaskDelay(10);
 		}
 		obd_give_semaphore();
-	}
-	// update the status string based on response
-	gauge_set_obd_status_string(update->obdStat, resp.status);
 
-	if (resp.status == OBD_OK) {
-		update->paramVal = obd_pid_convert(pid, resp.data);
+		// update the status string based on response
+		gauge_set_obd_status_string(update->obdStat, resp.status);
+
+		if (resp.status == OBD_OK) {
+			update->paramVal = obd_pid_convert(pid, resp.data);
+		}
 		return 0;
 	}
 	return 1;
@@ -267,7 +266,7 @@ void task_dgas_gauge(void) {
 	gauge_init();
 
 	for(;;) {
-		if (gauge_get_update(&update, OBD_PID_LIVE_ENGINE_SPEED, 100) == 0) {
+		if (gauge_get_update(&update, gState.param->pid, 100) == 0) {
 			// got successfull PID value so update gauge
 			gauge_update(&update);
 		}

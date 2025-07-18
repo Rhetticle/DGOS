@@ -10,6 +10,7 @@
 
 #include <dgas_types.h>
 #include <lvgl.h>
+#include <ui.h>
 
 // UI task priorities and stack sizes. If the UI task does any drawing
 // it should have a reasonably large stack as the call chain of most LVGL
