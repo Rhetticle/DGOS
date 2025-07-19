@@ -115,7 +115,7 @@ OBDStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t tim
 
 	req.data[0] = mode;
 	req.data[1] = pid;
-	req.dataLen = sizeof(OBD_MODE_LIVE) + sizeof(pid);
+	req.dataLen = sizeof(uint8_t) + sizeof(uint8_t); // mode and pid are both size uint8_t
 	req.timeout = timeout;
 
 	// send request to bus
@@ -145,7 +145,7 @@ OBDStatus dgas_obd_get_dtc(uint8_t* dest) {
 	BusResponse resp = {0};
 
 	req.data[0] = OBD_MODE_DTC;
-	req.dataLen = sizeof(OBD_MODE_DTC);
+	req.dataLen = sizeof(uint8_t);
 
 	// send request to bus
 	xQueueSend(*(bus.outBound), &req, 10);
@@ -265,8 +265,6 @@ void task_dgas_obd(void) {
 				obdResp.mode = obdReq.mode;
 				// got request from dgas_sys
 				obdResp.status = dgas_obd_handle_request(&obdReq, &obdResp);
-				obdResp.data[0] = 12;
-				obdResp.data[1] = 10;
 			}
 			// send the response to dgas_sys
 			xQueueSend(queueOBDResponse, &obdResp, 10);

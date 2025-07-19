@@ -144,7 +144,7 @@ void task_adc(void) {
 	for (;;) {
 		voltage = adc_conv_raw_to_voltage(lastConv);
 		xQueueSend(queueADC, &voltage, 10);
-		vTaskDelay(20);
+		vTaskDelay(100);
 	}
 }
 

@@ -64,7 +64,10 @@ extern QueueHandle_t queueKwpResponse;
 
 #define KWP_BUS_BAUD_RATE 10400
 
-#define KWP_BUS_ADDRESS 0x33
+#define KWP_BUS_ADDRESS 	0x33
+#define KWP_BUS_NADDRESS	0xCC
+
+#define KWP_BUS_PID_OFFSET	0x40
 
 #define KWP_INTERBYTE_DELAY 5
 

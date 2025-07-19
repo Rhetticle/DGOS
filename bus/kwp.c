@@ -110,12 +110,12 @@ static void kwp_bus_uart_init(void) {
  * */
 void UART4_IRQHandler(void) {
 	if (KWP_UART_INSTANCE->ISR & USART_ISR_RXNE) {
-		rxByteCount++;
 		if (rxByteCount == sizeof(rxBuff)) {
-			rxByteCount = 0;
+			return;
 		}
 		rxBuff[rxByteCount] = KWP_UART_INSTANCE->RDR;
 		KWP_UART_INSTANCE->ISR &= ~USART_ISR_RXNE;
+		rxByteCount++;
 	}
 }
 
@@ -216,8 +216,7 @@ BusStatus kwp_bus_read_byte(uint8_t* dest, uint32_t timeout) {
 		}
 		vTaskDelay(1);
 	}
-	*dest = rxBuff[rxByteCount];
-	rxByteCount--;
+	*dest = rxBuff[--rxByteCount];
 	return BUS_OK;
 }
 
@@ -331,7 +330,7 @@ BusStatus kwp_bus_init(void) {
 		return BUS_INIT_ERROR;
 	}
 
-	if (nAddress != ~KWP_BUS_ADDRESS) {
+	if (nAddress != KWP_BUS_NADDRESS) {
 		return BUS_INIT_ERROR;
 	}
 	// bus is now initialised, note that requests must be made every 5 seconds or bus will
@@ -360,8 +359,8 @@ static uint8_t kwp_bus_build_packet(uint8_t* dest, uint8_t* data, uint32_t size)
 	memcpy(dest + KWP_OFFSET_DATA_START, data, size);
 
 	// add checksum to end of array
-	dest[KWP_OFFSET_DATA_START + size] = kwp_bus_calc_checksum(data, size);
-	return KWP_OFFSET_DATA_START + size;
+	dest[KWP_OFFSET_DATA_START + size] = kwp_bus_calc_checksum(dest, size + 3);
+	return KWP_OFFSET_DATA_START + size + 1; // +1 for checksum
 }
 
 /**
@@ -414,7 +413,7 @@ BusStatus kwp_bus_get_response(BusResponse* resp, uint32_t timeout) {
 	uint8_t msg[OBD_BUS_RESPONSE_MAX];
 	BusStatus status;
 
-	if ((status = kwp_bus_read(msg, sizeof(uint8_t), timeout)) != BUS_OK) {
+	if ((status = kwp_bus_read_byte(&msg[0], timeout)) != BUS_OK) {
 		return status;
 	}
 
@@ -468,10 +467,10 @@ BusStatus kwp_bus_handle_request(BusRequest* busReq, BusResponse* busResp) {
  * Return: None
  * */
 void task_kwp_bus(void) {
-	//while(kwp_bus_init() != BUS_OK) {
-	//	vTaskDelay(100);
-	//}
-	kwp_bus_init();
+	while(kwp_bus_init() != BUS_OK) {
+		vTaskDelay(100);
+	}
+	//kwp_bus_init();
 	BusRequest req = {0};
 	BusResponse resp = {0};
 
