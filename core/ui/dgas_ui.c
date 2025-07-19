@@ -172,6 +172,18 @@ static void ui_event_callback_meas(lv_event_t* evt) {
  * Return: None
  * */
 static void ui_event_callback_debug(lv_event_t* evt) {
+	lv_event_code_t code = lv_event_get_code(evt);
+	lv_obj_t* focus = lv_group_get_focused(uiDebug.group);
+
+	if (code == LV_EVENT_CLICKED) {
+		if (focus == objects.obd2_exit_btn) {
+			ui_load_screen(&uiMenu);
+		} else if (focus == objects.obd2_pause_btn) {
+			// pause debugger
+		} else if (focus == objects.obd2_resume_btn) {
+			// resume debugger
+		}
+	}
 
 }
 
@@ -183,7 +195,16 @@ static void ui_event_callback_debug(lv_event_t* evt) {
  * Return: None
  * */
 static void ui_event_callback_dtc(lv_event_t* evt) {
+	lv_event_code_t code = lv_event_get_code(evt);
+	lv_obj_t* focus = lv_group_get_focused(uiDTC.group);
 
+	if (code == LV_EVENT_CLICKED) {
+		if (focus == objects.diagnose_exit_btn) {
+			ui_load_screen(&uiMenu);
+		} else if (focus == objects.diagnose_clear_btn) {
+			// clear DTCs
+		}
+	}
 }
 
 /**
@@ -194,7 +215,16 @@ static void ui_event_callback_dtc(lv_event_t* evt) {
  * Return: None
  * */
 static void ui_event_callback_self_test(lv_event_t* evt) {
+	lv_event_code_t code = lv_event_get_code(evt);
+	lv_obj_t* focus = lv_group_get_focused(uiSelfTest.group);
 
+	if (code == LV_EVENT_CLICKED) {
+		if (focus == objects.self_test_exit_btn) {
+			ui_load_screen(&uiMenu);
+		} else if (focus == objects.self_test_run_btn) {
+			// run self test
+		}
+	}
 }
 
 /**
@@ -205,7 +235,14 @@ static void ui_event_callback_self_test(lv_event_t* evt) {
  * Return: None
  * */
 static void ui_event_callback_settings(lv_event_t* evt) {
+	lv_event_code_t code = lv_event_get_code(evt);
+	lv_obj_t* focus = lv_group_get_focused(uiSettings.group);
 
+	if (code == LV_EVENT_CLICKED) {
+		if (focus == objects.settings_exit_btn) {
+			ui_load_screen(&uiMenu);
+		}
+	}
 }
 
 /**
@@ -216,7 +253,14 @@ static void ui_event_callback_settings(lv_event_t* evt) {
  * Return: None
  * */
 static void ui_event_callback_about(lv_event_t* evt) {
+	lv_event_code_t code = lv_event_get_code(evt);
+	lv_obj_t* focus = lv_group_get_focused(uiAbout.group);
 
+	if (code == LV_EVENT_CLICKED) {
+		if (focus == objects.about_exit_btn) {
+			ui_load_screen(&uiMenu);
+		}
+	}
 }
 
 /**
