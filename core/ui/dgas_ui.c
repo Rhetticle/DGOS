@@ -108,24 +108,21 @@ static void ui_flush_frame_buffer(lv_display_t* disp, const lv_area_t* area, uin
  *
  * Return: None
  * */
-static void ui_event_callback_menu(lv_event_t* evt) {
-	lv_event_code_t code = lv_event_get_code(evt);
-	lv_obj_t* focused = lv_group_get_focused(uiMenu.group);
-
+static void ui_event_callback_menu(lv_event_code_t code, lv_obj_t* focus) {
 	if (code == LV_EVENT_CLICKED) {
-		if (focused == objects.measure_btn) {
+		if (focus == objects.measure_btn) {
 			ui_load_screen(&uiMeas);
-		} else if (focused == objects.obd2_debug_btn) {
+		} else if (focus == objects.obd2_debug_btn) {
 			ui_load_screen(&uiDebug);
-		} else if (focused == objects.diagnose_btn) {
+		} else if (focus == objects.diagnose_btn) {
 			ui_load_screen(&uiDTC);
-		} else if (focused == objects.self_test_btn) {
+		} else if (focus == objects.self_test_btn) {
 			ui_load_screen(&uiSelfTest);
-		} else if (focused == objects.settings_btn) {
+		} else if (focus == objects.settings_btn) {
 			ui_load_screen(&uiSettings);
-		} else if (focused == objects.about_btn) {
+		} else if (focus == objects.about_btn) {
 			ui_load_screen(&uiAbout);
-		} else if (focused == objects.menu_exit_btn) {
+		} else if (focus == objects.menu_exit_btn) {
 			ui_load_screen(&uiGauge);
 		}
 	}
@@ -138,10 +135,7 @@ static void ui_event_callback_menu(lv_event_t* evt) {
  *
  * Return: None
  * */
-static void ui_event_callback_meas(lv_event_t* evt) {
-	lv_event_code_t code = lv_event_get_code(evt);
-	lv_obj_t* focus = lv_group_get_focused(uiMeas.group);
-
+static void ui_event_callback_meas(lv_event_code_t code, lv_obj_t* focus) {
 	if (code == LV_EVENT_CLICKED) {
 		if (focus == objects.eng_speed_btn) {
 			xEventGroupSetBits(eventGaugeParam, EVT_GAUGE_PARAM_RPM);
@@ -171,10 +165,7 @@ static void ui_event_callback_meas(lv_event_t* evt) {
  *
  * Return: None
  * */
-static void ui_event_callback_debug(lv_event_t* evt) {
-	lv_event_code_t code = lv_event_get_code(evt);
-	lv_obj_t* focus = lv_group_get_focused(uiDebug.group);
-
+static void ui_event_callback_debug(lv_event_code_t code, lv_obj_t* focus) {
 	if (code == LV_EVENT_CLICKED) {
 		if (focus == objects.obd2_exit_btn) {
 			ui_load_screen(&uiMenu);
@@ -194,10 +185,7 @@ static void ui_event_callback_debug(lv_event_t* evt) {
  *
  * Return: None
  * */
-static void ui_event_callback_dtc(lv_event_t* evt) {
-	lv_event_code_t code = lv_event_get_code(evt);
-	lv_obj_t* focus = lv_group_get_focused(uiDTC.group);
-
+static void ui_event_callback_dtc(lv_event_code_t code, lv_obj_t* focus) {
 	if (code == LV_EVENT_CLICKED) {
 		if (focus == objects.diagnose_exit_btn) {
 			ui_load_screen(&uiMenu);
@@ -214,10 +202,7 @@ static void ui_event_callback_dtc(lv_event_t* evt) {
  *
  * Return: None
  * */
-static void ui_event_callback_self_test(lv_event_t* evt) {
-	lv_event_code_t code = lv_event_get_code(evt);
-	lv_obj_t* focus = lv_group_get_focused(uiSelfTest.group);
-
+static void ui_event_callback_self_test(lv_event_code_t code, lv_obj_t* focus) {
 	if (code == LV_EVENT_CLICKED) {
 		if (focus == objects.self_test_exit_btn) {
 			ui_load_screen(&uiMenu);
@@ -234,10 +219,7 @@ static void ui_event_callback_self_test(lv_event_t* evt) {
  *
  * Return: None
  * */
-static void ui_event_callback_settings(lv_event_t* evt) {
-	lv_event_code_t code = lv_event_get_code(evt);
-	lv_obj_t* focus = lv_group_get_focused(uiSettings.group);
-
+static void ui_event_callback_settings(lv_event_code_t code, lv_obj_t* focus) {
 	if (code == LV_EVENT_CLICKED) {
 		if (focus == objects.settings_exit_btn) {
 			ui_load_screen(&uiMenu);
@@ -252,14 +234,42 @@ static void ui_event_callback_settings(lv_event_t* evt) {
  *
  * Return: None
  * */
-static void ui_event_callback_about(lv_event_t* evt) {
-	lv_event_code_t code = lv_event_get_code(evt);
-	lv_obj_t* focus = lv_group_get_focused(uiAbout.group);
-
+static void ui_event_callback_about(lv_event_code_t code, lv_obj_t* focus) {
 	if (code == LV_EVENT_CLICKED) {
 		if (focus == objects.about_exit_btn) {
 			ui_load_screen(&uiMenu);
 		}
+	}
+}
+
+/**
+ * Main UI event callback function, this function will then call the corresponding
+ * callback function based on the currently active UI
+ *
+ * evt: Pointer to LVGL event object
+ *
+ * Return: None
+ * */
+static void ui_event_callback(lv_event_t* evt) {
+	lv_event_code_t code = lv_event_get_code(evt);
+	lv_group_t* group = (lv_group_t*) lv_event_get_user_data(evt);
+	lv_obj_t* focus = lv_group_get_focused(group);
+
+	// call event callback function based on group passed
+	if (group == uiMenu.group) {
+		ui_event_callback_menu(code, focus);
+	} else if (group == uiMeas.group) {
+		ui_event_callback_meas(code, focus);
+	} else if (group == uiDebug.group) {
+		ui_event_callback_debug(code, focus);
+	} else if (group == uiDTC.group) {
+		ui_event_callback_dtc(code, focus);
+	} else if (group == uiSelfTest.group) {
+		ui_event_callback_self_test(code, focus);
+	} else if (group == uiSettings.group) {
+		ui_event_callback_settings(code, focus);
+	} else if (group == uiAbout.group) {
+		ui_event_callback_about(code, focus);
 	}
 }
 
@@ -316,18 +326,19 @@ void ui_load_screen(UI* ui) {
  *
  * ui: Pointer to UI struct to use callback with
  * çb: Callback function to register
+ * uData: Pointer to user data (NULL if not used)
  * opt: Callback option
  *
  * Return: None
  * */
-void ui_register_event_callback(UI* ui, evtCallback cb, UICallbackOpt opt) {
+void ui_register_event_callback(UI* ui, evtCallback cb, void* uData, UICallbackOpt opt) {
 	for (uint32_t i = 0; i < ui->size; i++) {
 		if(opt == UI_CALLBACK_USE_FOR_ALL) {
 			// register callback with each object in UI group
 			lv_obj_t* obj = lv_group_get_obj_by_index(ui->group, i);
-			lv_obj_add_event_cb(obj, cb, LV_EVENT_ALL, NULL);
+			lv_obj_add_event_cb(obj, cb, LV_EVENT_ALL, uData);
 		} else if (opt == UI_CALLBACK_USE_FOR_SCREEN) {
-			lv_obj_add_event_cb(ui->screen, cb, LV_EVENT_ALL, NULL);
+			lv_obj_add_event_cb(ui->screen, cb, LV_EVENT_ALL, uData);
 			break;
 		}
 	}
@@ -413,19 +424,26 @@ void ui_init_all_uis(void) {
 	ui_init_struct(&uiAbout, objects.about, aboutEventable, sizeof(aboutEventable)/sizeof(lv_obj_t*));
 
 	// register the callback functions for each UI
-	ui_register_event_callback(&uiMenu, &ui_event_callback_menu, UI_CALLBACK_USE_FOR_ALL);
+	ui_register_event_callback(&uiMenu, &ui_event_callback, (void*) uiMenu.group,
+			UI_CALLBACK_USE_FOR_ALL);
 
-	ui_register_event_callback(&uiMeas, &ui_event_callback_meas, UI_CALLBACK_USE_FOR_ALL);
+	ui_register_event_callback(&uiMeas, &ui_event_callback, (void*) uiMeas.group,
+			UI_CALLBACK_USE_FOR_ALL);
 
-	ui_register_event_callback(&uiDebug, &ui_event_callback_debug, UI_CALLBACK_USE_FOR_ALL);
+	ui_register_event_callback(&uiDebug, &ui_event_callback, (void*) uiDebug.group,
+			UI_CALLBACK_USE_FOR_ALL);
 
-	ui_register_event_callback(&uiDTC, &ui_event_callback_dtc, UI_CALLBACK_USE_FOR_ALL);
+	ui_register_event_callback(&uiDTC, &ui_event_callback, (void*) uiDTC.group,
+			UI_CALLBACK_USE_FOR_ALL);
 
-	ui_register_event_callback(&uiSelfTest, &ui_event_callback_self_test, UI_CALLBACK_USE_FOR_ALL);
+	ui_register_event_callback(&uiSelfTest, &ui_event_callback, (void*) uiSelfTest.group,
+			UI_CALLBACK_USE_FOR_ALL);
 
-	ui_register_event_callback(&uiSettings, &ui_event_callback_settings, UI_CALLBACK_USE_FOR_ALL);
+	ui_register_event_callback(&uiSettings, &ui_event_callback, (void*) uiSettings.group,
+			UI_CALLBACK_USE_FOR_ALL);
 
-	ui_register_event_callback(&uiAbout, &ui_event_callback_about, UI_CALLBACK_USE_FOR_ALL);
+	ui_register_event_callback(&uiAbout, &ui_event_callback, (void*) uiAbout.group,
+			UI_CALLBACK_USE_FOR_ALL);
 }
 
 /**
