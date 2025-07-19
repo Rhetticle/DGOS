@@ -307,12 +307,14 @@ TaskHandle_t task_lvgl_tick_get_handle(void) {
  * Return: None
  * */
 void ui_load_screen(UI* ui) {
+	lv_obj_t* prevActive = lv_screen_active();
 	lv_screen_load(ui->screen);
 	lv_indev_set_group(indevEnc, ui->group);
 
-	if (ui == &uiMenu) {
+	if ((ui == &uiMenu) && (prevActive != objects.gauge_main_ui)) {
 		// simple trick to focus the last selected
-		// button on the menu screen
+		// button on the menu screen but only if the previous screen
+		// wasn't the gauge (meaning the user just opened the menu)
 		lv_group_focus_prev(ui->group);
 		lv_group_focus_next(ui->group);
 	} else {
