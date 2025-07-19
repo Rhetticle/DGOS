@@ -356,7 +356,7 @@ void ui_init_all_uis(void) {
 
 	ui_init_struct(&uiMenu, objects.menu, menuEventable, sizeof(menuEventable)/sizeof(lv_obj_t*));
 
-	ui_init_struct(&uiMeas, objects.measure, measEventable, sizeof(menuEventable)/sizeof(lv_obj_t*));
+	ui_init_struct(&uiMeas, objects.measure, measEventable, sizeof(measEventable)/sizeof(lv_obj_t*));
 
 	ui_init_struct(&uiDebug, objects.obd2_debug, debugEventable, sizeof(debugEventable)/sizeof(lv_obj_t*));
 
