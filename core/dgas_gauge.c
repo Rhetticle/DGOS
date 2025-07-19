@@ -220,6 +220,19 @@ void gauge_param_change_handler(EventBits_t uxBits) {
 }
 
 /**
+ * Get most recent supply voltage measurement
+ *
+ * dest: Pointer to variable to store result
+ *
+ * Return: None
+ * */
+void gauge_get_supply_voltage(float* dest) {
+	if (queueADC != NULL) {
+		xQueueReceive(queueADC, dest, 0);
+	}
+}
+
+/**
  * Get update on a given OBD-II parameter to display on gauge
  *
  * update: Pointer to GaugeUpdate struct to populate
@@ -236,6 +249,9 @@ int gauge_get_update(GaugeUpdate* update, OBDPid pid, uint32_t timeout) {
 	req.pid = pid;
 	req.timeout = timeout;
 
+	// get most recent voltage readings
+	gauge_get_supply_voltage(&(update->vBat));
+
 	if (obd_take_semaphore() == pdTRUE) {
 		// got semaphore so send request and get response
 
@@ -247,7 +263,6 @@ int gauge_get_update(GaugeUpdate* update, OBDPid pid, uint32_t timeout) {
 
 		// update the status string based on response
 		gauge_set_obd_status_string(update->obdStat, resp.status);
-
 		if (resp.status == OBD_OK) {
 			update->paramVal = obd_pid_convert(pid, resp.data);
 		}

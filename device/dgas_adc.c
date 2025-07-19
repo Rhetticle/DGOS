@@ -16,7 +16,7 @@ static ADC_HandleTypeDef adcHandle;
 // Task handle for ADC controller task
 static TaskHandle_t taskHandleADC;
 // 16-bit uint to store most recent conversion from ADC
-static uint16_t lastConv;
+static uint32_t lastConv;
 // Queue for sending conversions
 QueueHandle_t queueADC;
 
@@ -26,8 +26,15 @@ QueueHandle_t queueADC;
  * Return: None
  * */
 static void adc_gpio_init(void) {
-	// just need to enable input pin port clock
+	GPIO_InitTypeDef init = {0};
 	__ADC_GPIO_CLK_EN();
+
+	init.Mode = GPIO_MODE_ANALOG;
+	init.Pin = ADC_INPUT_PIN;
+	init.Speed = GPIO_SPEED_HIGH;
+	init.Pull = GPIO_NOPULL;
+
+	HAL_GPIO_Init(ADC_INPUT_PORT, &init);
 }
 
 /**
@@ -37,6 +44,7 @@ static void adc_gpio_init(void) {
  * */
 static void adc_periph_init(void) {
 	ADC_ChannelConfTypeDef conf = {0};
+	__ADC_CLK_EN();
 	adcHandle.Instance = ADC_INSTANCE;
 
 	adcHandle.Init.ClockPrescaler = ADC_CLK_PRESCALER;
@@ -56,7 +64,7 @@ static void adc_periph_init(void) {
 
 	conf.Channel = ADC_CHANNEL;
 	conf.Offset = 0;
-	conf.Rank = 1;
+	conf.Rank = ADC_REGULAR_RANK_1;
 	conf.SamplingTime = ADC_SAMPLE_TIME;
 
 	HAL_ADC_ConfigChannel(&adcHandle, &conf);
@@ -115,7 +123,7 @@ TaskHandle_t dgas_task_adc_get_handle(void) {
  * Return: Voltage as a float
  * */
 float adc_conv_raw_to_voltage(uint16_t raw) {
-	float tmp = raw / ADC_RESOLUTION_VALUE;
+	float tmp = ((float) raw) / ADC_RESOLUTION_VALUE;
 	tmp = tmp * ADC_IO_SUPPLY_VOLTAGE;
 
 	return (tmp * ADC_VOLTAGE_DIVIDER_FACTOR);
@@ -136,7 +144,7 @@ void task_adc(void) {
 	for (;;) {
 		voltage = adc_conv_raw_to_voltage(lastConv);
 		xQueueSend(queueADC, &voltage, 10);
-		vTaskDelay(50);
+		vTaskDelay(20);
 	}
 }
 

@@ -32,21 +32,22 @@
 #define ADC_CHANNEL				ADC_CHANNEL_2
 
 // sample time
-#define ADC_SAMPLE_TIME			ADC_SAMPLETIME_3CYCLES
+#define ADC_SAMPLE_TIME			ADC_SAMPLETIME_480CYCLES
+
 
 /******************************** DMA *******************************/
 
 // Only DMA2 has streams which can access ADC1, check page 230 of reference manual
 #define ADC_DMA_INSTANCE			DMA2
 #define ADC_DMA_STREAM				DMA2_Stream0
-#define ADC_DMA_CHANNEL				DMA_CHANNEL_2
+#define ADC_DMA_CHANNEL				DMA_CHANNEL_0
 #define __ADC_DMA_CLK_EN()			__HAL_RCC_DMA2_CLK_ENABLE()
 
 /***************************** Hardware ****************************/
 
 // On PCB we have a 1Meg and 282k voltage divider, so when we read 3V3 the actual
-// supply voltage is around 15V -> factor is 4.545
-#define ADC_VOLTAGE_DIVIDER_FACTOR		4.545
+// supply voltage is around 15.08V -> factor is 4.57
+#define ADC_VOLTAGE_DIVIDER_FACTOR		4.735
 #define ADC_IO_SUPPLY_VOLTAGE			3.3
 
 
