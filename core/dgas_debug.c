@@ -261,7 +261,6 @@ void dgas_debug_handle_notification(uint32_t noti) {
 
 	dgas_debug_build_message(message, status, direction);
 	dgas_debug_log_message(message);
-	dgas_debug_flush();
 }
 
 /**

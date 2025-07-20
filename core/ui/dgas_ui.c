@@ -8,6 +8,7 @@
 #include <dgas_types.h>
 #include <dgas_ui.h>
 #include <dgas_gauge.h>
+#include <dgas_debug.h>
 #include <display.h>
 #include <dram.h>
 #include <flash.h>
@@ -170,9 +171,9 @@ static void ui_event_callback_debug(lv_event_code_t code, lv_obj_t* focus) {
 		if (focus == objects.obd2_exit_btn) {
 			ui_load_screen(&uiMenu);
 		} else if (focus == objects.obd2_pause_btn) {
-			// pause debugger
+			dgas_debug_pause();
 		} else if (focus == objects.obd2_resume_btn) {
-			// resume debugger
+			dgas_debug_resume();
 		}
 	}
 
@@ -508,6 +509,7 @@ void task_dgas_ui(void) {
 	task_dgas_lvgl_tick_init();
 	task_dgas_lvgl_update_init();
 	task_dgas_gauge_init();
+	task_dgas_debug_init();
 
 	for(;;) {
 		vTaskDelay(100);
