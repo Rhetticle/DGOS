@@ -430,11 +430,11 @@ BusStatus kwp_bus_get_response(BusResponse* resp, uint32_t timeout) {
 	if ((status = kwp_bus_read(msg + 1, remain, timeout)) != BUS_OK) {
 			return status;
 	}
-	//uint8_t checksum = KWP_GET_CHECKSUM_FROM_MSG(msg, msgSize);
+	uint8_t checksum = KWP_GET_CHECKSUM_FROM_MSG(msg, msgSize);
 
-	//if (kwp_bus_calc_checksum(msg, msgSize) != checksum) {
-	//	return BUS_CHECKSUM_ERROR;
-	//}
+	if (kwp_bus_calc_checksum(msg, msgSize) != checksum) {
+		return BUS_CHECKSUM_ERROR;
+	}
 	kwp_bus_extract_data(msg, fByte & KWP_DATA_SIZE_MASK, resp->data);
 	// update response struct with number of data bytes
 	resp->dataLen = fByte & KWP_DATA_SIZE_MASK;

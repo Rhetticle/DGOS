@@ -141,7 +141,6 @@ uint32_t dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t time
 	if (resp.status != BUS_OK) {
 		return 0;
 	} else {
-		// -2 since we don't need first two bytes, just the data bytes
 		memcpy(dest, resp.data + OBD_RESPONSE_DATA_START_INDEX, dataCount);
 	}
 	return dataCount;

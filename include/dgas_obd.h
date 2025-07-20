@@ -93,7 +93,6 @@ typedef enum {
 #define OBD_RESPONSE_MODE_INDEX				0
 #define OBD_RESPONSE_PID_INDEX				1
 #define OBD_RESPONSE_DATA_START_INDEX		2
-
 #define OBD_RESPONSE_GET_NUMBER_OF_DATA_BYTES(len)		(len - 2)
 
 typedef uint8_t OBDPid;
