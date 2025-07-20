@@ -215,7 +215,6 @@ BusStatus kwp_bus_read_byte(uint8_t* dest, uint32_t timeout) {
 		if (HAL_GetTick() > tickStart + timeout) {
 			return BUS_RX_ERROR;
 		}
-		vTaskDelay(1);
 	}
 	*dest = rxBuff[--rxByteCount];
 	return BUS_OK;
@@ -397,7 +396,7 @@ void kwp_bus_extract_data(uint8_t* response, uint32_t dataSize, uint8_t* dest) {
 	// First three bytes are header (1st is format byte), we can see that
 	// 0x83 & 0b111111 = 3 so [0x41, 0x0D, 0x00] is our data (0xD3 is checksum)
 
-	for (int i = 0; i < dataSize - 1; i++) {
+	for (uint32_t i = 0; i < dataSize; i++) {
 		dest[i] = response[i + KWP_HEADER_SIZE];
 	}
 }
@@ -431,12 +430,14 @@ BusStatus kwp_bus_get_response(BusResponse* resp, uint32_t timeout) {
 	if ((status = kwp_bus_read(msg + 1, remain, timeout)) != BUS_OK) {
 			return status;
 	}
-	uint8_t checksum = KWP_GET_CHECKSUM_FROM_MSG(msg, msgSize);
+	//uint8_t checksum = KWP_GET_CHECKSUM_FROM_MSG(msg, msgSize);
 
-	if (kwp_bus_calc_checksum(msg, msgSize) != checksum) {
-		return BUS_CHECKSUM_ERROR;
-	}
+	//if (kwp_bus_calc_checksum(msg, msgSize) != checksum) {
+	//	return BUS_CHECKSUM_ERROR;
+	//}
 	kwp_bus_extract_data(msg, fByte & KWP_DATA_SIZE_MASK, resp->data);
+	// update response struct with number of data bytes
+	resp->dataLen = fByte & KWP_DATA_SIZE_MASK;
 	return BUS_OK;
 }
 
@@ -468,10 +469,10 @@ BusStatus kwp_bus_handle_request(BusRequest* busReq, BusResponse* busResp) {
  * Return: None
  * */
 void task_kwp_bus(void) {
-	//while(kwp_bus_init() != BUS_OK) {
-	//	vTaskDelay(100);
-	//}
-	kwp_bus_init();
+	while(kwp_bus_init() != BUS_OK) {
+		vTaskDelay(100);
+	}
+
 	BusRequest req = {0};
 	BusResponse resp = {0};
 

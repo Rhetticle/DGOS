@@ -134,10 +134,13 @@ OBDStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t tim
 	while(xQueueReceive(*(bus.inBound), &resp, 10) != pdTRUE) {
 		vTaskDelay(10);
 	}
+	// we got response, as per OBD-II spec we should get data of form
+	// [OBD mode + 0x40, pid, A, B, C, D] where A, B, C, D are the pid
+	// data bytes
 	if (resp.status != BUS_OK) {
 		return OBD_ERROR;
 	} else {
-		*dest = resp.data[0];
+		memcpy(dest, resp.data + 2, resp.dataLen - 2);
 	}
 	return OBD_OK;
 }

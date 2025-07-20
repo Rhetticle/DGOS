@@ -49,6 +49,19 @@ void dgas_debug_resume(void) {
 }
 
 /**
+ * Add string to destination string
+ *
+ * dest: Destination string
+ * add: String to add
+ *
+ * Return: None
+ * */
+void dgas_debug_add_str(char* dest, char* add) {
+	uint32_t len = strlen(dest);
+	sprintf(dest + len, add);
+}
+
+/**
  * Extract the OBD mode from data sent over bus
  *
  * data: Data received from debug stream
@@ -61,14 +74,23 @@ OBDMode dgas_debug_get_obd_mode(uint8_t* data) {
 	if (active == BUS_ID_KWP) {
 		return data[KWP_OBD_MODE_INDEX];
 	}
+	return OBD_MODE_LIVE;
 }
 
 /**
  * Add debug message header to message. Header shows status icon, bus type
  * and request type.
+ *
+ * dest: Destination buffer for message
+ * status: Bus status of request/response
+ * oMode: OBDMode of request e.g. PID, DTC etc
+ * direction: DGAS_DEBUG_MODE_TRANSMITTING, DGAS_DEBUG_MODE_RECEIVING etc
+ *
+ * Return: None
  * */
-void dgas_debug_add_header(char* dest, BusStatus status, uint32_t mode) {
-
+void dgas_debug_add_header(char* dest, BusStatus status, OBDMode oMode, uint32_t direction) {
+	if (status == BUS_OK) {
+	}
 }
 
 /**
@@ -90,9 +112,15 @@ void dgas_debug_add_data(char* dest) {
  *
  * Return: None
  * */
-void dgas_debug_build_message(BusStatus status, uint32_t mode) {
+void dgas_debug_build_message(BusStatus status, uint32_t direction) {
 	char message[DGAS_DEBUG_MSG_LEN];
-	dgas_debug_add_header(message, status, mode);
+	uint8_t data[DGAS_DEBUG_STREAM_BUFFER_LEN];
+	OBDMode mode = dgas_debug_get_obd_mode(data);
+
+	// receive data from stream
+	xStreamBufferReceive(streamDebug, data, DGAS_DEBUG_STREAM_BUFFER_LEN, 0);
+
+	dgas_debug_add_header(message, status, mode, direction);
 	dgas_debug_add_data(message);
 }
 
@@ -105,9 +133,9 @@ void dgas_debug_build_message(BusStatus status, uint32_t mode) {
  * */
 void dgas_debug_handle_notification(uint32_t noti) {
 	BusStatus status = noti & DGAS_DEBUG_STATUS_MASK;
-	uint32_t mode = noti & DGAS_DEBUG_MODE_MASK;
+	uint32_t direction = noti & DGAS_DEBUG_DIRECTION_MASK;
 
-	dgas_debug_build_message(status, mode);
+	dgas_debug_build_message(status, direction);
 }
 
 /**

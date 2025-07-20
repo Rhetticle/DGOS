@@ -122,7 +122,7 @@ void gauge_load_param(const GaugeParam* param) {
 void gauge_update(GaugeUpdate* update) {
 	// UI operations are expensive so only update items if their
 	// values have actually changed
-	if (update->paramVal != gState.paramVal) {
+	//if (update->paramVal != gState.paramVal) {
 		char buff[GAUGE_PARAM_VAL_BUFF_LEN];
 		sprintf(buff, "%i", update->paramVal);
 		// parameter value has changed so update it
@@ -142,7 +142,7 @@ void gauge_update(GaugeUpdate* update) {
 			}
 			gState.paramMax = update->paramVal;
 		}
-	}
+	//}
 	if (strcmp(update->obdStat, gState.obdStat)) {
 		// status string is different so update it
 		if (ui_take_semaphore() == pdTRUE) {
@@ -188,7 +188,7 @@ void gauge_set_obd_status_string(char* dest, OBDStatus status) {
  * */
 void gauge_init(void) {
 	gauge_animate();
-	gauge_load_param(&paramRPM);
+	gauge_load_param(&paramCoolant);
 }
 
 /**

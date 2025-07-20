@@ -14,9 +14,9 @@
 #define DGAS_DEBUG_LOG_BYTE(byte)				(xStreamBufferSend(streamDebug, &byte, 1, 0))
 #define DGAS_DEBUG_LOG_STREAM(stream, len)		(xStreamBufferSend(streamDebug, stream, len, 0))
 
-#define DGAS_DEBUG_MODE_RECEIVING				(1 << 31)
-#define DGAS_DEBUG_MODE_TRANSMITTING			(0 << 31)
-#define DGAS_DEBUG_MODE_MASK					(1 << 31)
+#define DGAS_DEBUG_DIRECTION_RECEIVING				(1 << 31)
+#define DGAS_DEBUG_DIRECTION_TRANSMITTING			(0 << 31)
+#define DGAS_DEBUG_DIRECTION_MASK					(1 << 31)
 
 #define DGAS_DEBUG_STATUS_MASK					(~(1 << 31))
 
