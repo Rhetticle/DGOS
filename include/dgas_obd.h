@@ -87,6 +87,15 @@ typedef enum {
 #define OBD_CONV_MAF(A, B)				((256 * A + B) / 100)
 #define OBD_CONV_THROTTLE_POSITION(A)	(A / 2.55)
 
+// index of OBD mode, pid etc within a standard OBD-II response packet
+// Responses will take form such as [Mode + 0x40, pid, A, B, C, D] (typical PID response)
+// where A, B, C, D are the four data bytes which are to be converted to actual PID value
+#define OBD_RESPONSE_MODE_INDEX				0
+#define OBD_RESPONSE_PID_INDEX				1
+#define OBD_RESPONSE_DATA_START_INDEX		2
+
+#define OBD_RESPONSE_GET_NUMBER_OF_DATA_BYTES(len)		(len - 2)
+
 typedef uint8_t OBDPid;
 
 typedef struct {
@@ -98,7 +107,7 @@ typedef struct {
 typedef struct {
 	OBDMode mode;
 	uint8_t data[OBD_BUS_RESPONSE_MAX];
-	uint8_t dataLen;
+	uint32_t dataLen;
 	OBDStatus status;
 } OBDResponse;
 
@@ -118,9 +127,9 @@ BaseType_t obd_take_semaphore(void);
 void obd_give_semaphore(void);
 BusID obd_get_active_bus(void);
 int obd_pid_convert(OBDPid pid, uint8_t* data);
-OBDStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t timeout);
-OBDStatus dgas_obd_get_dtc(uint8_t* dest);
-OBDStatus dgas_obd_get_vehicle_info(OBDPid pid, uint8_t* dest);
+uint32_t dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t timeout);
+uint32_t dgas_obd_get_dtc(uint8_t* dest);
+uint32_t dgas_obd_get_vehicle_info(OBDPid pid, uint8_t* dest);
 OBDStatus dgas_obd_handle_request(OBDRequest* req, OBDResponse* resp);
 OBDStatus dgas_obd_bus_change_handler(EventBits_t uxBits);
 void task_dgas_obd_init(void);

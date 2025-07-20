@@ -116,9 +116,9 @@ int obd_pid_convert(OBDPid pid, uint8_t* data) {
  * dest: Destination array to store received data
  * timeout: Time to wait for response
  *
- * Return: Status indicating success or failure
+ * Return: Number of data bytes received
  * */
-OBDStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t timeout) {
+uint32_t dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t timeout) {
 	BusRequest req = {0};
 	BusResponse resp = {0};
 
@@ -134,15 +134,17 @@ OBDStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t tim
 	while(xQueueReceive(*(bus.inBound), &resp, 10) != pdTRUE) {
 		vTaskDelay(10);
 	}
+	uint32_t dataCount = OBD_RESPONSE_GET_NUMBER_OF_DATA_BYTES(resp.dataLen);
 	// we got response, as per OBD-II spec we should get data of form
 	// [OBD mode + 0x40, pid, A, B, C, D] where A, B, C, D are the pid
 	// data bytes
 	if (resp.status != BUS_OK) {
-		return OBD_ERROR;
+		return 0;
 	} else {
-		memcpy(dest, resp.data + 2, resp.dataLen - 2);
+		// -2 since we don't need first two bytes, just the data bytes
+		memcpy(dest, resp.data + OBD_RESPONSE_DATA_START_INDEX, dataCount);
 	}
-	return OBD_OK;
+	return dataCount;
 }
 
 /**
@@ -150,9 +152,9 @@ OBDStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t tim
  *
  * dest: Destination buffer to store response
  *
- * Return: Status to indicate success or failure
+ * Return: Number of data bytes received
  * */
-OBDStatus dgas_obd_get_dtc(uint8_t* dest) {
+uint32_t dgas_obd_get_dtc(uint8_t* dest) {
 	BusRequest req = {0};
 	BusResponse resp = {0};
 
@@ -164,13 +166,14 @@ OBDStatus dgas_obd_get_dtc(uint8_t* dest) {
 	while(xQueueReceive(*(bus.inBound), &resp, 10) != pdTRUE) {
 		vTaskDelay(10);
 	}
+	uint32_t dataCount = OBD_RESPONSE_GET_NUMBER_OF_DATA_BYTES(resp.dataLen);
 
 	if (resp.status != BUS_OK) {
-		return OBD_ERROR;
+		return 0;
 	} else {
-		memcpy(dest, resp.data, resp.dataLen);
+		memcpy(dest, resp.data + OBD_RESPONSE_DATA_START_INDEX, dataCount);
 	}
-	return OBD_OK;
+	return dataCount;
 }
 
 /**
@@ -181,7 +184,7 @@ OBDStatus dgas_obd_get_dtc(uint8_t* dest) {
  *
  * Return: status indicating success or failure
  * */
-OBDStatus dgas_obd_get_vehicle_info(OBDPid pid, uint8_t* dest) {
+uint32_t dgas_obd_get_vehicle_info(OBDPid pid, uint8_t* dest) {
 	return dgas_obd_get_pid(pid, OBD_MODE_VEHICLE_INFO, dest, 100);
 }
 
@@ -195,11 +198,14 @@ OBDStatus dgas_obd_get_vehicle_info(OBDPid pid, uint8_t* dest) {
  * */
 OBDStatus dgas_obd_handle_request(OBDRequest* req, OBDResponse* resp) {
 	if (req->mode == OBD_MODE_LIVE) {
-		return dgas_obd_get_pid(req->pid, OBD_MODE_LIVE, resp->data, req->timeout);
+		resp->dataLen = dgas_obd_get_pid(req->pid, OBD_MODE_LIVE, resp->data, req->timeout);
 	} else if (req->mode == OBD_MODE_DTC) {
-		return dgas_obd_get_dtc(resp->data);
+		resp->dataLen = dgas_obd_get_dtc(resp->data);
 	} else if (req->mode == OBD_MODE_VEHICLE_INFO) {
-		return dgas_obd_get_vehicle_info(req->pid, resp->data);
+		resp->dataLen = dgas_obd_get_vehicle_info(req->pid, resp->data);
+	}
+	if (resp->dataLen == 0) {
+		return OBD_ERROR;
 	}
 	return OBD_OK;
 }

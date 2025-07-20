@@ -472,7 +472,6 @@ void task_kwp_bus(void) {
 	while(kwp_bus_init() != BUS_OK) {
 		vTaskDelay(100);
 	}
-
 	BusRequest req = {0};
 	BusResponse resp = {0};
 
