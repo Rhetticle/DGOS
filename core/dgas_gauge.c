@@ -89,6 +89,8 @@ void gauge_load_param(const GaugeParam* param) {
 
 	gState.param = param;
 	gState.paramMax = 0;
+	gState.paramVal = 0;
+
 	if (ui_take_semaphore() == pdTRUE) {
 		// update gauge arc, parameter name and units
 		lv_arc_set_range(objects.gauge_arc, param->min, param->max);
@@ -122,7 +124,7 @@ void gauge_load_param(const GaugeParam* param) {
 void gauge_update(GaugeUpdate* update) {
 	// UI operations are expensive so only update items if their
 	// values have actually changed
-	//if (update->paramVal != gState.paramVal) {
+	if (update->paramVal != gState.paramVal) {
 		char buff[GAUGE_PARAM_VAL_BUFF_LEN];
 		sprintf(buff, "%i", update->paramVal);
 		// parameter value has changed so update it
@@ -142,7 +144,7 @@ void gauge_update(GaugeUpdate* update) {
 			}
 			gState.paramMax = update->paramVal;
 		}
-	//}
+	}
 	if (strcmp(update->obdStat, gState.obdStat)) {
 		// status string is different so update it
 		if (ui_take_semaphore() == pdTRUE) {
