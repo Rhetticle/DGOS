@@ -12,11 +12,12 @@
 #include <stm32f7xx.h>
 
 #ifdef DGAS_CONFIG_USE_FREERTOS
-#include "FreeRTOS.h"
-#include "queue.h"
-#include "message_buffer.h"
-#include "semphr.h"
-#include "event_groups.h"
+#include <FreeRTOS.h>
+#include <queue.h>
+#include <message_buffer.h>
+#include <stream_buffer.h>
+#include <semphr.h>
+#include <event_groups.h>
 #else
 #error "FreeRTOS not enabled, check dgas_conf.h"
 #endif

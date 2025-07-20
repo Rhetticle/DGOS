@@ -71,12 +71,13 @@ extern QueueHandle_t queueKwpResponse;
 
 #define KWP_INTERBYTE_DELAY 5
 
-#define KWP_HEADER_SIZE 3 // 3 header bytes
-#define KWP_HEADER_ONE 0xC2
-#define KWP_HEADER_TWO 0x33
-#define KWP_HEADER_THREE 0xF1
-#define KWP_DATA_SIZE_MASK 0b111111 // mask to apply to format byte to know how many bytes are to follow
-#define KWP_OFFSET_DATA_START 3
+#define KWP_HEADER_SIZE 		3 // 3 header bytes
+#define KWP_HEADER_ONE 			0xC2
+#define KWP_HEADER_TWO 			0x33
+#define KWP_HEADER_THREE 		0xF1
+#define KWP_DATA_SIZE_MASK 		0b111111 // mask to apply to format byte to know how many bytes are to follow
+#define KWP_OFFSET_DATA_START 	3
+#define KWP_OBD_MODE_INDEX		3
 #define KWP_GET_MSG_SIZE_FROM_FBYTE(fByte) ((fByte & KWP_DATA_SIZE_MASK) + KWP_HEADER_SIZE + 1)
 #define KWP_GET_CHECKSUM_FROM_MSG(msg, msgSize) (msg[msgSize - 1]) // checksum is last byte of message
 

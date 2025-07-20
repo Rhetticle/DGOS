@@ -116,6 +116,7 @@ typedef struct {
 TaskHandle_t task_dgas_obd_get_handle(void);
 BaseType_t obd_take_semaphore(void);
 void obd_give_semaphore(void);
+BusID obd_get_active_bus(void);
 int obd_pid_convert(OBDPid pid, uint8_t* data);
 OBDStatus dgas_obd_get_pid(OBDPid pid, OBDMode mode, uint8_t* dest, uint32_t timeout);
 OBDStatus dgas_obd_get_dtc(uint8_t* dest);

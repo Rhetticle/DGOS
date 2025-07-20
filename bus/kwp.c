@@ -7,6 +7,7 @@
 
 #include <dgas_types.h>
 #include <dgas_obd.h>
+#include <dgas_debug.h>
 #include <kwp.h>
 #include <bus.h>
 #include <string.h>
@@ -359,7 +360,7 @@ static uint8_t kwp_bus_build_packet(uint8_t* dest, uint8_t* data, uint32_t size)
 	memcpy(dest + KWP_OFFSET_DATA_START, data, size);
 
 	// add checksum to end of array
-	dest[KWP_OFFSET_DATA_START + size] = kwp_bus_calc_checksum(dest, size + 3);
+	dest[KWP_OFFSET_DATA_START + size] = kwp_bus_calc_checksum(dest, size + KWP_HEADER_SIZE);
 	return KWP_OFFSET_DATA_START + size + 1; // +1 for checksum
 }
 
@@ -467,10 +468,10 @@ BusStatus kwp_bus_handle_request(BusRequest* busReq, BusResponse* busResp) {
  * Return: None
  * */
 void task_kwp_bus(void) {
-	while(kwp_bus_init() != BUS_OK) {
-		vTaskDelay(100);
-	}
-	//kwp_bus_init();
+	//while(kwp_bus_init() != BUS_OK) {
+	//	vTaskDelay(100);
+	//}
+	kwp_bus_init();
 	BusRequest req = {0};
 	BusResponse resp = {0};
 

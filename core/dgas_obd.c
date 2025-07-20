@@ -64,6 +64,15 @@ void obd_give_semaphore(void) {
 }
 
 /**
+ * Get the bus ID of the currently active OBD-II bus
+ *
+ * Return: Bus ID of the currently active OBD-II bus
+ * */
+BusID obd_get_active_bus(void) {
+	return bus.bid;
+}
+
+/**
  * Convert from the four raw OBD-II bytes (A, B, C, D) to the actual parameter
  * value depending on PID.
  *
