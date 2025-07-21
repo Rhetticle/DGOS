@@ -494,6 +494,9 @@ void task_lvgl(void) {
  * Return: None
  * */
 void task_dgas_ui(void) {
+	uint8_t byte = 0xAA;
+	uint32_t count = 0;
+	TaskHandle_t task;
 	semaphoreUI = xSemaphoreCreateBinary();
 	ui_give_semaphore();
 	dram_init();
@@ -512,6 +515,17 @@ void task_dgas_ui(void) {
 	task_dgas_debug_init();
 
 	for(;;) {
+		if (streamDebug != NULL) {
+			xStreamBufferSend(streamDebug, &byte, 1, 0);
+			count++;
+			if (count == 10) {
+				task = task_dgas_debug_get_handle();
+				if (task != NULL) {
+					xTaskNotify(task, 10, eNoAction);
+				}
+				count = 0;
+			}
+		}
 		vTaskDelay(100);
 	}
 }

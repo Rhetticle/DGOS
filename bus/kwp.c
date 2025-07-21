@@ -233,10 +233,13 @@ BusStatus kwp_bus_write(uint8_t* data, uint32_t len) {
 
 	for (int i = 0; i < len; i++) {
 		if ((status = kwp_bus_write_byte(data[i])) != BUS_OK) {
+			//DGAS_DEBUG_NOTIFY_TRANSMITTING(status);
 			return status;
 		}
+		//DGAS_DEBUG_LOG_BYTE(data[i]);
 		vTaskDelay(KWP_INTERBYTE_DELAY); // must wait 5ms between bytes according to spec
 	}
+	//DGAS_DEBUG_NOTIFY_TRANSMITTING(BUS_OK);
 	return BUS_OK;
 }
 
@@ -253,9 +256,13 @@ BusStatus kwp_bus_read(uint8_t* dest, uint32_t len, uint32_t timeout) {
 
 	for (uint32_t i = 0; i < len; i++) {
 		if ((status = kwp_bus_read_byte(&dest[i], timeout)) != BUS_OK) {
+			//DGAS_DEBUG_NOTIFY_RECEIVING(status);
 			return status;
 		}
+		// successfully read byte so log it to debugger
+		//DGAS_DEBUG_LOG_BYTE(dest[i]);
 	}
+	//DGAS_DEBUG_NOTIFY_RECEIVING(BUS_OK);
 	return BUS_OK;
 }
 
@@ -413,7 +420,7 @@ BusStatus kwp_bus_get_response(BusResponse* resp, uint32_t timeout) {
 	uint8_t msg[OBD_BUS_RESPONSE_MAX];
 	BusStatus status;
 
-	if ((status = kwp_bus_read_byte(&msg[0], timeout)) != BUS_OK) {
+	if ((status = kwp_bus_read(&msg[0], sizeof(uint8_t), timeout)) != BUS_OK) {
 		return status;
 	}
 
@@ -469,9 +476,10 @@ BusStatus kwp_bus_handle_request(BusRequest* busReq, BusResponse* busResp) {
  * Return: None
  * */
 void task_kwp_bus(void) {
-	while(kwp_bus_init() != BUS_OK) {
-		vTaskDelay(100);
-	}
+	//while(kwp_bus_init() != BUS_OK) {
+	//	vTaskDelay(100);
+	//}
+	kwp_bus_init();
 	BusRequest req = {0};
 	BusResponse resp = {0};
 

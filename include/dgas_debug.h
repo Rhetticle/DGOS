@@ -10,19 +10,25 @@
 
 #include <dgas_types.h>
 #include <bus.h>
+#include <dgas_obd.h>
 
-#define DGAS_DEBUG_LOG_BYTE(byte)				(xStreamBufferSend(streamDebug, &byte, 1, 0))
-#define DGAS_DEBUG_LOG_STREAM(stream, len)		(xStreamBufferSend(streamDebug, stream, len, 0))
+#define DGAS_DEBUG_LOG_BYTE(byte)				do{if (streamDebug != NULL) {\
+													xStreamBufferSend(streamDebug, &byte, 1, 0);\
+												}}while(0)
+
+#define DGAS_DEBUG_LOG_STREAM(stream, len)		do{if (streamDebug != NULL) {\
+													xStreamBufferSend(streamDebug, stream, len, 0);\
+												}}while(0)
 
 #define DGAS_DEBUG_DIRECTION_RECEIVING			(1 << 31)
-#define DGAS_DEBUG_DIRECTION_TRANSMITTING		(0 << 31)
+#define DGAS_DEBUG_DIRECTION_TRANSMITTING		(0 << 30)
 #define DGAS_DEBUG_DIRECTION_MASK				(1 << 31)
 
 #define DGAS_DEBUG_STATUS_MASK					(~(1 << 31))
 
-#define DGAS_DEBUG_NOTIFY(status, mode)			(xTaskNotify(task_dgas_debug_get_handle(), status | mode, eNoAction))
-#define DGAS_DEBUG_NOTIFY_RECEIVING(status)		DGAS_DEBUG_NOTIFY(status, DGAS_DEBUG_MODE_RECEIVING)
-#define DGAS_DEBUG_NOTIFY_TRANSMITTING(status)	DGAS_DEBUG_NOTIFY(status, DGAS_DEBUG_MODE_TRANSMITTING)
+#define DGAS_DEBUG_NOTIFY(status, dir)			xTaskNotify(task_dgas_debug_get_handle(), status | dir, eNoAction)
+#define DGAS_DEBUG_NOTIFY_RECEIVING(status)		DGAS_DEBUG_NOTIFY(status, DGAS_DEBUG_DIRECTION_RECEIVING)
+#define DGAS_DEBUG_NOTIFY_TRANSMITTING(status)	DGAS_DEBUG_NOTIFY(status, DGAS_DEBUG_DIRECTION_TRANSMITTING)
 
 #define DGAS_DEBUG_MSG_LEN						256
 #define DGAS_DEBUG_BUFF_LEN						256
@@ -35,7 +41,7 @@
 
 
 // stream buffer constants
-#define DGAS_DEBUG_STREAM_BUFFER_LEN			64
+#define DGAS_DEBUG_STREAM_BUFFER_LEN			BUS_TRANSACTION_MAX
 #define DGAS_DEBUG_STREAM_BUFFER_TRIG_LEVEL		1
 
 extern StreamBufferHandle_t streamDebug;
@@ -46,6 +52,7 @@ TaskHandle_t task_dgas_debug_get_handle(void);
 void dgas_debug_pause(void);
 void dgas_debug_resume(void);
 void dgas_debug_add_str(char* dest, char* add);
+void dgas_debug_log_byte(uint8_t byte);
 void dgas_debug_add_newline(char* dest);
 OBDMode dgas_debug_get_obd_mode(uint8_t* data);
 void dgas_debug_add_obd_mode(char* dest, OBDMode mode);

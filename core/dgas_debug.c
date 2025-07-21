@@ -239,10 +239,16 @@ void dgas_debug_flush(void) {
 
 	if (strlen(lv_label_get_text(label)) > DGAS_DEBUG_WINDOW_MAX_TEXT) {
 		// clear textarea to stop text from overflowing
-		lv_textarea_set_text(objects.obd2_debug_textarea, "");
+		if (ui_take_semaphore() == pdTRUE) {
+			lv_textarea_set_text(objects.obd2_debug_textarea, "");
+			ui_give_semaphore();
+		}
 	}
 
-	lv_textarea_add_text(objects.obd2_debug_textarea, debugLog);
+	if (ui_take_semaphore() == pdTRUE) {
+		lv_textarea_add_text(objects.obd2_debug_textarea, debugLog);
+		ui_give_semaphore();
+	}
 	memset(debugLog, 0, sizeof(debugLog));
 
 }
@@ -269,7 +275,7 @@ void dgas_debug_handle_notification(uint32_t noti) {
  * Return: None
  * */
 void task_debug(void) {
-	uint32_t notiVal;
+	uint32_t notiVal = 0xFF;
 	debugPaused = false;
 	streamDebug = xStreamBufferCreate(DGAS_DEBUG_STREAM_BUFFER_LEN, DGAS_DEBUG_STREAM_BUFFER_TRIG_LEVEL);
 
