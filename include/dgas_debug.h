@@ -26,7 +26,7 @@
 
 #define DGAS_DEBUG_STATUS_MASK					(~(1 << 31))
 
-#define DGAS_DEBUG_NOTIFY(status, dir)			xTaskNotify(task_dgas_debug_get_handle(), status | dir, eNoAction)
+#define DGAS_DEBUG_NOTIFY(status, dir)			xTaskNotify(task_dgas_debug_get_handle(), status | dir, eSetValueWithOverwrite)
 #define DGAS_DEBUG_NOTIFY_RECEIVING(status)		DGAS_DEBUG_NOTIFY(status, DGAS_DEBUG_DIRECTION_RECEIVING)
 #define DGAS_DEBUG_NOTIFY_TRANSMITTING(status)	DGAS_DEBUG_NOTIFY(status, DGAS_DEBUG_DIRECTION_TRANSMITTING)
 
@@ -56,7 +56,7 @@ void dgas_debug_log_byte(uint8_t byte);
 void dgas_debug_add_newline(char* dest);
 OBDMode dgas_debug_get_obd_mode(uint8_t* data);
 void dgas_debug_add_obd_mode(char* dest, OBDMode mode);
-void dgas_debug_add_header(char* dest, BusStatus status, OBDMode oMode, uint32_t direction);
+void dgas_debug_add_header(char* dest, BusStatus status, uint32_t direction);
 void dgas_debug_add_data(char* dest, uint8_t* data, uint32_t dataLen);
 void dgas_debug_add_error(char* dest, BusStatus status);
 void dgas_debug_build_message(char* message, BusStatus status, uint32_t direction);

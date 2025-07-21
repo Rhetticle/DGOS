@@ -514,18 +514,15 @@ void task_dgas_ui(void) {
 	task_dgas_gauge_init();
 	task_dgas_debug_init();
 
-	for(;;) {
+	for(;;) {/*
 		if (streamDebug != NULL) {
 			xStreamBufferSend(streamDebug, &byte, 1, 0);
 			count++;
-			if (count == 10) {
-				task = task_dgas_debug_get_handle();
-				if (task != NULL) {
-					xTaskNotify(task, 10, eNoAction);
-				}
+			if (count == 6) {
+				DGAS_DEBUG_NOTIFY_TRANSMITTING(BUS_TX_ERROR);
 				count = 0;
 			}
-		}
+		}*/
 		vTaskDelay(100);
 	}
 }

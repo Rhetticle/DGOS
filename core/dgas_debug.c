@@ -122,7 +122,7 @@ void dgas_debug_add_obd_mode(char* dest, OBDMode mode) {
  *
  * Return: None
  * */
-void dgas_debug_add_header(char* dest, BusStatus status, OBDMode oMode, uint32_t direction) {
+void dgas_debug_add_header(char* dest, BusStatus status, uint32_t direction) {
 	// add icon (tick or cross)
 	if (status == BUS_OK) {
 		dgas_debug_add_str(dest, "#00FF00 \uf00c#");
@@ -135,8 +135,6 @@ void dgas_debug_add_header(char* dest, BusStatus status, OBDMode oMode, uint32_t
 	} else {
 		dgas_debug_add_str(dest, "#AA11F0 [ECU]#");
 	}
-	// add OBD mode
-	dgas_debug_add_obd_mode(dest, oMode);
 }
 
 /**
@@ -197,13 +195,11 @@ void dgas_debug_add_error(char* dest, BusStatus status) {
 void dgas_debug_build_message(char* message, BusStatus status, uint32_t direction) {
 	uint8_t data[DGAS_DEBUG_STREAM_BUFFER_LEN];
 	uint32_t dataLen;
-	OBDMode mode = dgas_debug_get_obd_mode(data);
 
-	// receive data from stream
-	dataLen = xStreamBufferReceive(streamDebug, data, DGAS_DEBUG_STREAM_BUFFER_LEN, 0);
-
-	dgas_debug_add_header(message, status, mode, direction);
+	dgas_debug_add_header(message, status, direction);
 	if (status == BUS_OK) {
+		// receive data from stream
+		dataLen = xStreamBufferReceive(streamDebug, data, DGAS_DEBUG_STREAM_BUFFER_LEN, 0);
 		dgas_debug_add_data(message, data, dataLen);
 	} else {
 		dgas_debug_add_error(message, status);
@@ -264,6 +260,7 @@ void dgas_debug_handle_notification(uint32_t noti) {
 	BusStatus status = noti & DGAS_DEBUG_STATUS_MASK;
 	uint32_t direction = noti & DGAS_DEBUG_DIRECTION_MASK;
 	char message[DGAS_DEBUG_MSG_LEN];
+	memset(message, 0, DGAS_DEBUG_MSG_LEN);
 
 	dgas_debug_build_message(message, status, direction);
 	dgas_debug_log_message(message);
@@ -280,7 +277,7 @@ void task_debug(void) {
 	streamDebug = xStreamBufferCreate(DGAS_DEBUG_STREAM_BUFFER_LEN, DGAS_DEBUG_STREAM_BUFFER_TRIG_LEVEL);
 
 	for(;;) {
-		if ((notiVal = ulTaskNotifyTake(pdTRUE, 10))) {
+		if ((notiVal = ulTaskNotifyTake(pdTRUE, portMAX_DELAY))) {
 			dgas_debug_handle_notification(notiVal);
 		}
 		if ((lv_screen_active() == objects.obd2_debug) && !debugPaused) {

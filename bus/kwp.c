@@ -256,13 +256,13 @@ BusStatus kwp_bus_read(uint8_t* dest, uint32_t len, uint32_t timeout) {
 
 	for (uint32_t i = 0; i < len; i++) {
 		if ((status = kwp_bus_read_byte(&dest[i], timeout)) != BUS_OK) {
-			//DGAS_DEBUG_NOTIFY_RECEIVING(status);
+			DGAS_DEBUG_NOTIFY_RECEIVING(status);
 			return status;
 		}
 		// successfully read byte so log it to debugger
-		//DGAS_DEBUG_LOG_BYTE(dest[i]);
+		DGAS_DEBUG_LOG_BYTE(dest[i]);
 	}
-	//DGAS_DEBUG_NOTIFY_RECEIVING(BUS_OK);
+	DGAS_DEBUG_NOTIFY_RECEIVING(BUS_OK);
 	return BUS_OK;
 }
 
