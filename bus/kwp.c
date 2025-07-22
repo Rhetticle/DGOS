@@ -233,13 +233,12 @@ BusStatus kwp_bus_write(uint8_t* data, uint32_t len) {
 
 	for (int i = 0; i < len; i++) {
 		if ((status = kwp_bus_write_byte(data[i])) != BUS_OK) {
-			//DGAS_DEBUG_NOTIFY_TRANSMITTING(status);
+			DGAS_DEBUG_LOG_MSG_ERROR_TRANSMIT(BUS_ID_KWP, status);
 			return status;
 		}
-		//DGAS_DEBUG_LOG_BYTE(data[i]);
 		vTaskDelay(KWP_INTERBYTE_DELAY); // must wait 5ms between bytes according to spec
 	}
-	//DGAS_DEBUG_NOTIFY_TRANSMITTING(BUS_OK);
+	DGAS_DEBUG_LOG_MSG_DATA_TRANSMIT(data, len, BUS_ID_KWP);
 	return BUS_OK;
 }
 
@@ -256,13 +255,11 @@ BusStatus kwp_bus_read(uint8_t* dest, uint32_t len, uint32_t timeout) {
 
 	for (uint32_t i = 0; i < len; i++) {
 		if ((status = kwp_bus_read_byte(&dest[i], timeout)) != BUS_OK) {
-			DGAS_DEBUG_NOTIFY_RECEIVING(status);
+			DGAS_DEBUG_LOG_MSG_ERROR_RECEIVE(BUS_ID_KWP, status);
 			return status;
 		}
-		// successfully read byte so log it to debugger
-		DGAS_DEBUG_LOG_BYTE(dest[i]);
 	}
-	DGAS_DEBUG_NOTIFY_RECEIVING(BUS_OK);
+	DGAS_DEBUG_LOG_MSG_DATA_RECEIVE(dest, len, BUS_ID_KWP);
 	return BUS_OK;
 }
 

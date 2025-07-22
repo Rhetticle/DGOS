@@ -20,9 +20,8 @@
 
 // Task handle for debug task
 static TaskHandle_t taskHandleDebug;
-// stream for receiving bytes being sent over OBD-II bus. It is the bus's responsibility
-// to ensure it tells the debugger what it is sending and receiving
-StreamBufferHandle_t streamDebug;
+// Queue for debug messages
+QueueHandle_t queueDebug;
 // flag to keep track of whether debug window is paused or not
 static bool debugPaused;
 // buffer for storing debug messages before flushing to UI
@@ -80,6 +79,34 @@ void dgas_debug_add_newline(char* dest) {
 }
 
 /**
+ * Log a message to the debugger. This should be called by bus tasks either directly or using
+ * macros in dgas_debug.h
+ *
+ * data: Data sent or received over bus (NULL if error)
+ * dataLen: Number of bytes successfully sent or received
+ * status: Status of bus transaction
+ * bid: BusID of bus which logged message
+ * direction: Direction of transaction (transmit or receive)
+ *
+ * Return: None
+ * */
+void dgas_debug_log_msg(uint8_t* data, uint32_t dataLen, BusStatus status, BusID bid, BusDirection direction) {
+	DebugMsg msg = {0};
+
+	if (data != NULL) {
+		memcpy(msg.data, data, dataLen);
+	}
+	msg.dataLen = dataLen;
+	msg.bid = bid;
+	msg.status = status;
+	msg.direction = direction;
+
+	if (queueDebug != NULL) {
+		xQueueSend(queueDebug, &msg, 10);
+	}
+}
+
+/**
  * Extract the OBD mode from data sent over bus
  *
  * data: Data received from debug stream
@@ -122,7 +149,7 @@ void dgas_debug_add_obd_mode(char* dest, OBDMode mode) {
  *
  * Return: None
  * */
-void dgas_debug_add_header(char* dest, BusStatus status, uint32_t direction) {
+void dgas_debug_add_header(char* dest, BusStatus status, BusDirection direction) {
 	// add icon (tick or cross)
 	if (status == BUS_OK) {
 		dgas_debug_add_str(dest, "#00FF00 \uf00c#");
@@ -130,7 +157,7 @@ void dgas_debug_add_header(char* dest, BusStatus status, uint32_t direction) {
 		dgas_debug_add_str(dest, "#FF0000 \uf00d#");
 	}
 
-	if (direction == DGAS_DEBUG_DIRECTION_TRANSMITTING) {
+	if (direction == BUS_DIR_TRANSMIT) {
 		dgas_debug_add_str(dest, "#00FF00 [DGAS]#");
 	} else {
 		dgas_debug_add_str(dest, "#AA11F0 [ECU]#");
@@ -172,15 +199,15 @@ void dgas_debug_add_data(char* dest, uint8_t* data, uint32_t dataLen) {
  * */
 void dgas_debug_add_error(char* dest, BusStatus status) {
 	if (status == BUS_BUFFER_ERROR) {
-		dgas_debug_add_str(dest, "#FF0000 ERROR: BUFFER#");
+		dgas_debug_add_str(dest, "#FF0000 ERROR: BUFFER#\n");
 	} else if (status == BUS_CHECKSUM_ERROR) {
-		dgas_debug_add_str(dest, "#FF0000 ERROR: CHECKSUM#");
+		dgas_debug_add_str(dest, "#FF0000 ERROR: CHECKSUM#\n");
 	} else if (status == BUS_ECHO_ERROR) {
-		dgas_debug_add_str(dest, "#FF0000 ERROR: ECHO#");
+		dgas_debug_add_str(dest, "#FF0000 ERROR: ECHO#\n");
 	} else if (status == BUS_TX_ERROR) {
-		dgas_debug_add_str(dest, "#FF0000 ERROR: TX ERROR#");
+		dgas_debug_add_str(dest, "#FF0000 ERROR: TX ERROR#\n");
 	} else if (status == BUS_RX_ERROR) {
-		dgas_debug_add_str(dest, "#FF0000 ERROR: RX ERROR#");
+		dgas_debug_add_str(dest, "#FF0000 ERROR: RX ERROR#\n");
 	}
 }
 
@@ -192,17 +219,14 @@ void dgas_debug_add_error(char* dest, BusStatus status) {
  *
  * Return: None
  * */
-void dgas_debug_build_message(char* message, BusStatus status, uint32_t direction) {
-	uint8_t data[DGAS_DEBUG_STREAM_BUFFER_LEN];
-	uint32_t dataLen;
+void dgas_debug_build_message(char* message, DebugMsg* msg) {
 
-	dgas_debug_add_header(message, status, direction);
-	if (status == BUS_OK) {
+	dgas_debug_add_header(message, msg->status, msg->direction);
+	if (msg->status == BUS_OK) {
 		// receive data from stream
-		dataLen = xStreamBufferReceive(streamDebug, data, DGAS_DEBUG_STREAM_BUFFER_LEN, 0);
-		dgas_debug_add_data(message, data, dataLen);
+		dgas_debug_add_data(message, msg->data, msg->dataLen);
 	} else {
-		dgas_debug_add_error(message, status);
+		dgas_debug_add_error(message, msg->status);
 	}
 }
 
@@ -250,20 +274,18 @@ void dgas_debug_flush(void) {
 }
 
 /**
- * Handle a task notification
+ * Handle a new debug message to log to debugger
  *
- * noti: Notification value
+ * msg: Pointer to debug message to log
  *
  * Return: None
  * */
-void dgas_debug_handle_notification(uint32_t noti) {
-	BusStatus status = noti & DGAS_DEBUG_STATUS_MASK;
-	uint32_t direction = noti & DGAS_DEBUG_DIRECTION_MASK;
-	char message[DGAS_DEBUG_MSG_LEN];
-	memset(message, 0, DGAS_DEBUG_MSG_LEN);
+void dgas_debug_handle_message(DebugMsg* msg) {
+	char msgStr[DGAS_DEBUG_MSG_LEN];
+	memset(msgStr, 0, DGAS_DEBUG_MSG_LEN);
 
-	dgas_debug_build_message(message, status, direction);
-	dgas_debug_log_message(message);
+	dgas_debug_build_message(msgStr, msg);
+	dgas_debug_log_message(msgStr);
 }
 
 /**
@@ -272,13 +294,13 @@ void dgas_debug_handle_notification(uint32_t noti) {
  * Return: None
  * */
 void task_debug(void) {
-	uint32_t notiVal = 0xFF;
+	DebugMsg msg = {0};
 	debugPaused = false;
-	streamDebug = xStreamBufferCreate(DGAS_DEBUG_STREAM_BUFFER_LEN, DGAS_DEBUG_STREAM_BUFFER_TRIG_LEVEL);
+	queueDebug = xQueueCreate(DGAS_DEBUG_QUEUE_LEN, sizeof(DebugMsg));
 
 	for(;;) {
-		if ((notiVal = ulTaskNotifyTake(pdTRUE, portMAX_DELAY))) {
-			dgas_debug_handle_notification(notiVal);
+		if (xQueueReceive(queueDebug, &msg, 10) == pdTRUE) {
+			dgas_debug_handle_message(&msg);
 		}
 		if ((lv_screen_active() == objects.obd2_debug) && !debugPaused) {
 			// only flush to UI if debug screen is active and debugger is not paused

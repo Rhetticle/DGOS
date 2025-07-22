@@ -37,6 +37,7 @@ typedef enum {
 
 // Bus status error/success codes
 typedef enum {
+	BUS_NULL,
 	BUS_OK,
 	BUS_TX_ERROR,
 	BUS_RX_ERROR,
@@ -45,6 +46,12 @@ typedef enum {
 	BUS_CHECKSUM_ERROR,
 	BUS_INIT_ERROR
 }BusStatus;
+
+// Bus directions
+typedef enum {
+	BUS_DIR_TRANSMIT,
+	BUS_DIR_RECEIVE
+}BusDirection;
 
 /**
  * BusRequest
