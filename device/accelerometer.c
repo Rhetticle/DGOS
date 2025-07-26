@@ -386,21 +386,18 @@ DeviceStatus accelerometer_get_update(AccelData* data) {
 }
 
 /**
- * Run a self test on the accelerometer. Checks the whoAmI register value as
- * simple way of testing accelerometer.
+ * Read whoAmI register value from accelerometer, expect 0x33
+ *
+ * whoAmI: Pointer to variable to store whoAmI register value
  *
  * Return: DEV_OK if self test was successfull, error code otherwise
  * */
-DeviceStatus accelerometer_self_test(void) {
-	uint8_t whoAmI;
+DeviceStatus accelerometer_who_am_i(uint8_t* whoAmI) {
 	DeviceStatus status;
 
-	if ((status = accelerometer_read(&whoAmI, sizeof(uint8_t),
+	if ((status = accelerometer_read(whoAmI, sizeof(uint8_t),
 			WHO_AM_I_REG, 100)) != DEV_OK) {
 		return status;
-	}
-	if (whoAmI != WHO_AM_I) {
-		return DEV_READ_ERROR;
 	}
 	return DEV_OK;
 }

@@ -210,3 +210,36 @@ void dram_read_section(uint32_t startAddr, uint8_t* dest, uint32_t size) {
 		dest[i - startAddr] = *(dramPtr + i);
 	}
 }
+
+/**
+ * Test read access to entire DRAM array.
+ *
+ * Return: 0 if successfull, address of read failure otherwise
+ * */
+uint32_t dram_test_read_access(void) {
+	uint16_t tmp;
+
+	for (uint32_t i = 0; i < DRAM_SIZE; i++) {
+		if (HAL_SDRAM_Read_16b(&dramHandle, &i, &tmp, sizeof(uint16_t)) != HAL_OK) {
+			return i;
+		}
+	}
+	return 0;
+}
+
+/**
+ * Test write access to entire DRAM array. Note this should not be called during normal
+ * operation of DGAS device since DRAM is being used for frame buffers.
+ *
+ * Return: 0 if successfull, address of write failure otherwise
+ * */
+uint32_t dram_test_write_access(void) {
+	uint16_t tmp = 0xFFFF;
+
+	for (uint32_t i = 0; i < DRAM_SIZE; i++) {
+		if (HAL_SDRAM_Write_16b(&dramHandle, &i, &tmp, sizeof(uint16_t)) != HAL_OK) {
+			return i;
+		}
+	}
+	return 0;
+}

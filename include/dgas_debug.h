@@ -14,7 +14,7 @@
 
 #define DGAS_DEBUG_MSG_LEN						256
 #define DGAS_DEBUG_BUFF_LEN						256
-#define DGAS_DEBUG_WINDOW_MAX_TEXT				550
+#define DGAS_DEBUG_WINDOW_MAX_TEXT				300
 
 /************************ FreeRTOS *********************/
 

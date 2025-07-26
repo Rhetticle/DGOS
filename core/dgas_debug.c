@@ -102,7 +102,9 @@ void dgas_debug_log_msg(uint8_t* data, uint32_t dataLen, BusStatus status, BusID
 	msg.direction = direction;
 
 	if (queueDebug != NULL) {
-		xQueueSend(queueDebug, &msg, 10);
+		// since this will be called by bus controller we don't want to wait at all
+		// so set ticks to wait to zero
+		xQueueSend(queueDebug, &msg, 0);
 	}
 }
 
@@ -301,12 +303,13 @@ void task_debug(void) {
 	for(;;) {
 		if (xQueueReceive(queueDebug, &msg, 10) == pdTRUE) {
 			dgas_debug_handle_message(&msg);
+
+			if ((lv_screen_active() == objects.obd2_debug) && !debugPaused) {
+				// only flush to UI if debug screen is active and debugger is not paused
+				dgas_debug_flush();
+			}
 		}
-		if ((lv_screen_active() == objects.obd2_debug) && !debugPaused) {
-			// only flush to UI if debug screen is active and debugger is not paused
-			dgas_debug_flush();
-		}
-		vTaskDelay(10);
+		vTaskDelay(20);
 	}
 }
 

@@ -10,6 +10,7 @@
 
 typedef enum {
 	DEV_OK,
+	DEV_ERROR,
 	DEV_READ_ERROR,
 	DEV_WRITE_ERROR,
 	DEV_TIMEOUT

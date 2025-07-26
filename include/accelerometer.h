@@ -39,7 +39,7 @@ extern QueueHandle_t queueAccelerometerConf;
 #define ACC_I2C_ADDR 0b0011000
 
 #define ACC_BYTES_NO 6 // number of acceleration data bytes (2 for each of the 3 axes)
-#define WHO_AM_I 0x33 // constant value stored in the WHO_AM_I register
+#define ACC_WHO_AM_I 0x33 // constant value stored in the WHO_AM_I register
 #define ACC_AXIS_COUNT 3
 #define ACC_VALUE_OFFSET_NORMAL 6 // values in normal mode are 10-bit so 6-bit offset
 #define ACC_VALUE_OFFSET_HIGH_RES 4 // values in high resolution mode are 12-bit so 4-bit offset
@@ -144,7 +144,7 @@ DeviceStatus accelerometer_set_sample_rate(uint8_t sRate);
 DeviceStatus accelerometer_set_resolution(bool highRes);
 DeviceStatus accelerometer_init(uint8_t sampleRate, uint8_t range, bool highRes);
 DeviceStatus accelerometer_get_update(AccelData* data);
-DeviceStatus accelerometer_self_test(void);
+DeviceStatus accelerometer_who_am_i(uint8_t* whoAmI);
 DeviceStatus accelerometer_configure(AccelConfig* config);
 
 #ifdef ACC_USE_FREERTOS
