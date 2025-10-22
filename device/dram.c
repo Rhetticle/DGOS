@@ -243,3 +243,30 @@ uint32_t dram_test_write_access(void) {
 	}
 	return 0;
 }
+
+/**
+ * Get estimate of how much DRAM is currently in use.
+ *
+ * Return: Estimate of number of bytes currently in use
+ * */
+uint32_t dram_calc_used(void) {
+	// will loop through each page and check if first byte is zero
+	// or not
+	uint32_t used = 0;
+
+	for (int i = 0; i < DRAM_SIZE; i++) {
+		if (*(dramPtr + i) != 0) {
+			used += DRAM_PAGE_SIZE;
+		}
+	}
+	return used;
+}
+
+/**
+ * Get estimate of how much DRAM is free (not in use)
+ *
+ * Return: Estimate of number of bytes free
+ * */
+uint32_t dram_calc_free(void) {
+	return (DRAM_SIZE - dram_calc_used());
+}

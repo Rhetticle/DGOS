@@ -82,6 +82,8 @@
 
 // DRAM size (2 MiB)
 #define DRAM_SIZE 0x200000
+// DRAM Page Size (4 KiB)
+#define DRAM_PAGE_SIZE 0x1000
 // DRAM start address relative to STM32 address space
 #define DRAM_START_ADDR 0xC0000000
 
@@ -94,5 +96,7 @@ void dram_clear(void);
 void dram_read_section(uint32_t startAddr, uint8_t* dest, uint32_t size);
 uint32_t dram_test_read_access(void);
 uint32_t dram_test_write_access(void);
+uint32_t dram_calc_used(void);
+uint32_t dram_calc_free(void);
 
 #endif /* DGOS_INCLUDE_DRAM_H_ */

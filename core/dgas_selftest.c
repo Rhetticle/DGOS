@@ -56,7 +56,9 @@ DeviceStatus dgas_self_test_dram(MemTestDesc* mDesc) {
 	// We can't test write functionality to DRAM since it stores frame buffers so we
 	// can only test read access
 	mDesc->readTime = HAL_GetTick() - readTick;
-	mDesc->used = dgas_self_test_mem_calc_used();
+	mDesc->used = dram_calc_used();
+	mDesc->free = dram_calc_free();
+	return DEV_OK;
 }
 
 /**
@@ -67,6 +69,8 @@ DeviceStatus dgas_self_test_dram(MemTestDesc* mDesc) {
  * Return: Status indicating success or failure
  * */
 DeviceStatus dgas_self_test_flash(MemTestDesc* mDesc) {
+	uint32_t readTick = HAL_GetTick();
+
 
 }
 
