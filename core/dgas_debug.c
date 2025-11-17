@@ -249,30 +249,22 @@ void dgas_debug_log_message(char* message) {
 }
 
 /**
- * Flush a debug message to the debug UI textarea
- *
- * message: Message to flush to UI
+ * Flush debug message buffer to display
  *
  * Return: None
  * */
 void dgas_debug_flush(void) {
-	// only flush if debug screen is active and not paused
 	lv_obj_t* label = lv_textarea_get_label(objects.obd2_debug_textarea);
 
-	if (strlen(lv_label_get_text(label)) > DGAS_DEBUG_WINDOW_MAX_TEXT) {
-		// clear textarea to stop text from overflowing
-		if (ui_take_semaphore() == pdTRUE) {
-			lv_textarea_set_text(objects.obd2_debug_textarea, "");
-			ui_give_semaphore();
-		}
-	}
-
 	if (ui_take_semaphore() == pdTRUE) {
+		if (strlen(lv_label_get_text(label)) > DGAS_DEBUG_WINDOW_MAX_TEXT) {
+			// clear textarea to stop text from overflowing
+			lv_textarea_set_text(objects.obd2_debug_textarea, "");
+		}
 		lv_textarea_add_text(objects.obd2_debug_textarea, debugLog);
 		ui_give_semaphore();
 	}
 	memset(debugLog, 0, sizeof(debugLog));
-
 }
 
 /**
@@ -301,7 +293,7 @@ void task_debug(void) {
 	queueDebug = xQueueCreate(DGAS_DEBUG_QUEUE_LEN, sizeof(DebugMsg));
 
 	for(;;) {
-		if (xQueueReceive(queueDebug, &msg, 10) == pdTRUE) {
+		if (xQueueReceive(queueDebug, &msg, 0) == pdTRUE) {
 			dgas_debug_handle_message(&msg);
 
 			if ((lv_screen_active() == objects.obd2_debug) && !debugPaused) {
@@ -309,7 +301,7 @@ void task_debug(void) {
 				dgas_debug_flush();
 			}
 		}
-		vTaskDelay(20);
+		vTaskDelay(75);
 	}
 }
 
