@@ -69,9 +69,6 @@ DeviceStatus dgas_self_test_dram(MemTestDesc* mDesc) {
  * Return: Status indicating success or failure
  * */
 DeviceStatus dgas_self_test_flash(MemTestDesc* mDesc) {
-	uint32_t readTick = HAL_GetTick();
-
-
 }
 
 /**

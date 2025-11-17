@@ -215,6 +215,7 @@ BusStatus kwp_bus_read_byte(uint8_t* dest, uint32_t timeout) {
 		if (HAL_GetTick() > tickStart + timeout) {
 			return BUS_RX_ERROR;
 		}
+		vTaskDelay(1);
 	}
 	*dest = rxBuff[--rxByteCount];
 	return BUS_OK;

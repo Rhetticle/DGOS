@@ -79,7 +79,7 @@ extern EventGroupHandle_t eventGaugeParam;
 
 #define GAUGE_ANIM_ARC_START_VALUE		0
 #define GAUGE_ANIM_ARC_END_VALUE		4200
-#define GAUGE_ANIM_ARC_STEP_SIZE		50
+#define GAUGE_ANIM_ARC_STEP_SIZE		150
 
 // event definitions
 #define EVT_GAUGE_PARAM_RPM				1 << 0
