@@ -22,11 +22,70 @@
 #define TASK_DGAS_LVGL_TICK_STACK_SIZE		(configMINIMAL_STACK_SIZE * 2)
 #define TASK_DGAS_LVGL_TICK_PRIORITY		(tskIDLE_PRIORITY + 8)
 
+#define UI_EVENT_PARAMS_MAX		32
+#define UI_EVENT_QUEUE_SIZE		8
+
+extern QueueHandle_t queueUIEvent;
+
+/**
+ * UI object
+ *
+ * screen: LVGL screen associated with UI
+ * group: Group of eventable LVGL objects
+ * size: Number of objects in group
+ * */
 typedef struct {
 	lv_obj_t* screen;
 	lv_group_t* group;
 	uint32_t size;
 }UI;
+
+/**
+ * UI ID. ID to identify each unique UI, needed for event
+ * dispatching and handling
+ * */
+typedef enum {
+	UI_UID_GAUGE,
+	UI_UID_MENU,
+	UI_UID_MEAS,
+	UI_UID_DEBUG,
+	UI_UID_DTC,
+	UI_UID_SELFTEST,
+	UI_UID_SETTINGS,
+	UI_UID_ABOUT
+}UID;
+
+/**
+ * UI Event codes
+ * */
+typedef enum {
+	UI_EVENT_MEAS_CHANGE_PARAM,
+
+	UI_EVENT_DEBUG_PAUSE,
+	UI_EVENT_DEBUG_RESUME,
+
+	UI_EVENT_DTC_GET,
+	UI_EVENT_DTC_CLEAR,
+
+	UI_EVENT_SELFTEST_RUN,
+
+	UI_EVENT_SETTINGS_BUS,
+	UI_EVENT_SETTINGS_PARAM
+}UIEventCode;
+
+/**
+ * UI Event descriptor
+ *
+ * eCode: Event code (see UIEventCode)
+ * eParams: Parameters to be passed to event handler
+ * eCount: Number of event parameters
+ * */
+typedef struct {
+	UID eUid;
+	UIEventCode eCode;
+	uint32_t eParams[UI_EVENT_PARAMS_MAX];
+	uint32_t eCount;
+}UIEvent;
 
 typedef void (*evtCallback) (lv_event_t*);
 
@@ -44,6 +103,7 @@ TaskHandle_t task_lvgl_tick_get_handle(void);
 void ui_load_screen(UI* ui);
 void ui_register_event_callback(UI* ui, evtCallback cb, void* uData, UICallbackOpt opt);
 void ui_init_struct(UI* init, lv_obj_t* scrn, lv_obj_t** eventable, uint32_t size);
+void ui_dispatch_event(UID eUid, UIEventCode eCode, uint32_t* eParams, uint32_t eCount);
 void task_dgas_lvgl_update_init(void);
 void task_dgas_lvgl_tick_init(void);
 void task_dgas_ui_init(void);

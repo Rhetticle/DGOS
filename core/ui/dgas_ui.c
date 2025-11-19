@@ -7,8 +7,7 @@
 
 #include <dgas_types.h>
 #include <dgas_ui.h>
-#include <dgas_gauge.h>
-#include <dgas_debug.h>
+#include <dgas_param.h>
 #include <display.h>
 #include <dram.h>
 #include <flash.h>
@@ -16,6 +15,7 @@
 #include <buttons.h>
 #include <ui.h>
 #include <stdio.h>
+#include <string.h>
 
 // Stores handle of UI controller task
 static TaskHandle_t taskHandleDgasUi;
@@ -33,6 +33,9 @@ static lv_display_t* display;
 static lv_indev_t* indevEnc;
 // UIs
 static UI uiGauge, uiMenu, uiMeas, uiDebug, uiDTC, uiSelfTest, uiSettings, uiAbout;
+
+// Out bound queue for UI events
+QueueHandle_t queueUIEvent;
 
 /**
  * Take UI semaphore
@@ -137,24 +140,28 @@ static void ui_event_callback_menu(lv_event_code_t code, lv_obj_t* focus) {
  * Return: None
  * */
 static void ui_event_callback_meas(lv_event_code_t code, lv_obj_t* focus) {
+	GaugeParamID param = 0;
+
 	if (code == LV_EVENT_CLICKED) {
 		if (focus == objects.eng_speed_btn) {
-			xEventGroupSetBits(eventGaugeParam, EVT_GAUGE_PARAM_RPM);
+			param = GAUGE_PARAM_ID_RPM;
 		} else if (focus == objects.vehicle_speed_btn) {
-			xEventGroupSetBits(eventGaugeParam, EVT_GAUGE_PARAM_SPEED);
+			param = GAUGE_PARAM_ID_SPEED;
 		} else if (focus == objects.eng_load_btn) {
-			xEventGroupSetBits(eventGaugeParam, EVT_GAUGE_PARAM_ENGINE_LOAD);
+			param = GAUGE_PARAM_ID_ENGINE_LOAD;
 		} else if (focus == objects.coolant_temp_btn) {
-			xEventGroupSetBits(eventGaugeParam, EVT_GAUGE_PARAM_COOLANT_TEMP);
+			param = GAUGE_PARAM_ID_COOLANT;
 		} else if (focus == objects.boost_btn) {
-			xEventGroupSetBits(eventGaugeParam, EVT_GAUGE_PARAM_BOOST);
+			param = GAUGE_PARAM_ID_BOOST;
 		} else if (focus == objects.intake_temp_btn) {
-			xEventGroupSetBits(eventGaugeParam, EVT_GAUGE_PARAM_INTAKE_TEMP);
+			param = GAUGE_PARAM_ID_AIR_TEMP;
 		} else if (focus == objects.maf_btn) {
-			xEventGroupSetBits(eventGaugeParam, EVT_GAUGE_PARAM_MAF);
+			param = GAUGE_PARAM_ID_MAF;
 		} else if (focus == objects.fuel_pressure_btn) {
-			xEventGroupSetBits(eventGaugeParam, EVT_GAUGE_PARAM_FUEL_PRESSURE);
+			param = GAUGE_PARAM_ID_FUEL_PRESSURE;
 		}
+		uint32_t send = (uint32_t) param;
+		ui_dispatch_event(UI_UID_MEAS, UI_EVENT_MEAS_CHANGE_PARAM, &param, 1);
 		ui_load_screen(&uiGauge);
 	}
 }
@@ -171,9 +178,9 @@ static void ui_event_callback_debug(lv_event_code_t code, lv_obj_t* focus) {
 		if (focus == objects.obd2_exit_btn) {
 			ui_load_screen(&uiMenu);
 		} else if (focus == objects.obd2_pause_btn) {
-			dgas_debug_pause();
+			ui_dispatch_event(UI_UID_DEBUG, UI_EVENT_DEBUG_PAUSE, NULL, 0);
 		} else if (focus == objects.obd2_resume_btn) {
-			dgas_debug_resume();
+			ui_dispatch_event(UI_UID_DEBUG, UI_EVENT_DEBUG_RESUME, NULL, 0);
 		}
 	}
 
@@ -208,7 +215,6 @@ static void ui_event_callback_self_test(lv_event_code_t code, lv_obj_t* focus) {
 		if (focus == objects.self_test_exit_btn) {
 			ui_load_screen(&uiMenu);
 		} else if (focus == objects.self_test_run_btn) {
-			// run self test
 		}
 	}
 }
@@ -474,6 +480,26 @@ void ui_init_lvgl(void) {
 }
 
 /**
+ * Dispatch a UI event to be handled elsewhere (dgas_sys)
+ *
+ * eCode: Event code
+ * eParams: Parameters associated with event (if any)
+ * pCount: Number of parameters in eParams
+ *
+ * Return: None
+ * */
+void ui_dispatch_event(UID eUid, UIEventCode eCode, uint32_t* eParams, uint32_t eCount) {
+	UIEvent evt = {0};
+	if (eCount != 0) {
+		memcpy(evt.eParams, eParams, eCount);
+	}
+	evt.eCode = eCode;
+	evt.eCount = eCount;
+	evt.eUid = eUid;
+	xQueueSend(queueUIEvent, &evt, 0);
+}
+
+/**
  * LVGL update task function.
  *
  * Return: None
@@ -508,8 +534,7 @@ void task_dgas_ui(void) {
 	ui_load_screen(&uiGauge);
 	task_dgas_lvgl_tick_init();
 	task_dgas_lvgl_update_init();
-	task_dgas_gauge_init();
-	task_dgas_debug_init();
+	queueUIEvent = xQueueCreate(UI_EVENT_QUEUE_SIZE, sizeof(UIEvent));
 
 	for(;;) {
 		vTaskDelay(100);

@@ -13,6 +13,17 @@
 extern const GaugeParam paramRPM, paramSpeed, paramEngineLoad, paramCoolant, paramBoost, paramAirTemp,
 					paramMAF, paramFuelPressure;
 
+typedef enum {
+	GAUGE_PARAM_ID_RPM,
+	GAUGE_PARAM_ID_SPEED,
+	GAUGE_PARAM_ID_ENGINE_LOAD,
+	GAUGE_PARAM_ID_COOLANT,
+	GAUGE_PARAM_ID_BOOST,
+	GAUGE_PARAM_ID_AIR_TEMP,
+	GAUGE_PARAM_ID_MAF,
+	GAUGE_PARAM_ID_FUEL_PRESSURE
+}GaugeParamID;
+
 // Parameter constants definitions
 
 /********************* RPM ***************************/

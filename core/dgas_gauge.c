@@ -283,6 +283,7 @@ void task_dgas_gauge(void) {
 	EventBits_t uxBits;
 	queueGaugeUpdate = xQueueCreate(1, sizeof(GaugeUpdate));
 	eventGaugeParam = xEventGroupCreate();
+	vTaskDelay(1000);
 	gauge_init();
 	dgas_task_adc_init();
 
