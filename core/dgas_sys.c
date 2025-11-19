@@ -14,6 +14,7 @@
 #include <dgas_selftest.h>
 #include <dgas_param.h>
 #include <accelerometer.h>
+#include <dgas_adc.h>
 #include <dram.h>
 #include <flash.h>
 #include <display.h>
@@ -34,6 +35,14 @@ TaskHandle_t task_dgas_sys_get_handle(void) {
 	return taskHandleSys;
 }
 
+/**
+ * Measure UI event handler
+ *
+ * eParams: Event parameters
+ * eCount: Number of event parameters
+ *
+ * Return: None
+ * */
 void meas_event_handler(uint32_t* eParams, uint32_t eCount) {
 	if (eCount == 0) {
 		return;
@@ -42,6 +51,13 @@ void meas_event_handler(uint32_t* eParams, uint32_t eCount) {
 	xEventGroupSetBits(eventGaugeParam, 1 << (uint32_t) parameter);
 }
 
+/**
+ * Event handler for OBD debugger
+ *
+ * eCode: Event code
+ *
+ * Return: None
+ * */
 void debug_event_handler(UIEventCode eCode) {
 	if (eCode == UI_EVENT_DEBUG_PAUSE) {
 		dgas_debug_pause();
@@ -50,6 +66,13 @@ void debug_event_handler(UIEventCode eCode) {
 	}
 }
 
+/**
+ * Handle UI event
+ *
+ * evt: UI event that occured
+ *
+ * Return: None
+ * */
 void handle_ui_event(UIEvent* evt) {
 	switch(evt->eUid) {
 	case UI_UID_MEAS:
@@ -70,6 +93,77 @@ void handle_ui_event(UIEvent* evt) {
 }
 
 /**
+ * Wait for given object to be created (e.g. FreeRTOS object)
+ *
+ * obj: Pointer to object to wait on
+ * timeout: Timeout in ms
+ *
+ * Return: 0 on success, 1 on timeout
+ * */
+uint32_t dgas_sys_wait_on_object(void** obj, uint32_t timeout) {
+	uint32_t time = 0;
+
+	while(*obj == NULL) {
+		vTaskDelay(1);
+		time++;
+		if (time == timeout) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+/**
+ * Initialise hardware and devices for DGAS
+ *
+ * Return: 0 on success, error number otherwise
+ * */
+uint32_t dgas_sys_hardware_init(void) {
+	dram_init();
+	display_init();
+	flash_init();
+	flash_enable_memory_mapped();
+	task_init_buttons();
+	task_init_accelerometer();
+	if (dgas_sys_wait_on_object((void**)&queueAccelerometerData, DGAS_SYS_BOOT_TIMEOUT_DEV) != 0) {
+		return DGAS_SYS_BOOT_ERROR_DEV;
+	}
+	dgas_task_adc_init();
+	if (dgas_sys_wait_on_object((void**)&queueADC, DGAS_SYS_BOOT_TIMEOUT_DEV) != 0) {
+		return DGAS_SYS_BOOT_ERROR_DEV;
+	}
+	return DGAS_SYS_BOOT_OK;
+}
+
+/**
+ * Main boot sequence for DGAS
+ *
+ * Return: 0 if successful, error number otherwise
+ * */
+uint32_t dgas_sys_boot(void) {
+	if (dgas_sys_hardware_init() != 0) {
+		return DGAS_SYS_BOOT_ERROR_DEV;
+	}
+	task_dgas_ui_init();
+	if (dgas_sys_wait_on_object((void**)&queueUIEvent, DGAS_SYS_BOOT_TIMEOUT_UI) != 0) {
+		return DGAS_SYS_BOOT_ERROR_UI;
+	}
+	task_dgas_obd_init();
+	if (dgas_sys_wait_on_object((void**)&queueOBDRequest, DGAS_SYS_BOOT_TIMEOUT_OBD) != 0) {
+		return DGAS_SYS_BOOT_ERROR_OBD;
+	}
+	task_dgas_gauge_init();
+	if (dgas_sys_wait_on_object((void**)&queueGaugeUpdate, DGAS_SYS_BOOT_TIMEOUT_UI) != 0) {
+		return DGAS_SYS_BOOT_ERROR_UI;
+	}
+	task_dgas_debug_init();
+	if (dgas_sys_wait_on_object((void**)&queueDebug, DGAS_SYS_BOOT_TIMEOUT_UI) != 0) {
+		return DGAS_SYS_BOOT_ERROR_UI;
+	}
+	return DGAS_SYS_BOOT_OK;
+}
+
+/**
  * Thread function for DGAS system task
  *
  * Return: None
@@ -78,11 +172,7 @@ void task_dgas_sys(void) {
 	AccelData data;
 	UIEvent evt;
 
-	task_dgas_ui_init();
-	vTaskDelay(1000);
-	task_dgas_gauge_init();
-	//task_dgas_debug_init();
-	task_dgas_obd_init();
+	dgas_sys_boot();
 
 	for (;;) {
 		if (queueAccelerometerData != NULL) {

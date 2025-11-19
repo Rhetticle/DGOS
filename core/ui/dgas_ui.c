@@ -522,11 +522,6 @@ void task_lvgl(void) {
 void task_dgas_ui(void) {
 	semaphoreUI = xSemaphoreCreateBinary();
 	ui_give_semaphore();
-	dram_init();
-	display_init();
-	flash_init();
-	flash_enable_memory_mapped();
-	task_init_buttons();
 	ui_init_lvgl();
 	// EEZ init
 	ui_init();
