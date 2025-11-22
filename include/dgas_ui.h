@@ -25,7 +25,18 @@
 #define UI_EVENT_PARAMS_MAX		32
 #define UI_EVENT_QUEUE_SIZE		8
 
+#define UI_REQUEST_PARAM_MAX	32
+#define UI_REQUEST_STRING_MAX	32
+#define UI_REQUEST_QUEUE_SIZE	8
+
+#define UI_GAUGE_UPDATE_OBD_STAT_MAX_LEN	8
+#define UI_GAUGE_LOAD_PARAM_NAME_MAX_LEN	8
+#define UI_GAUGE_LOAD_PARAM_UNIT_MAX_LEN	8
+
+#define UI_SUBSYS_COUNT		10
+
 extern QueueHandle_t queueUIEvent;
+extern QueueHandle_t queueUIRequest;
 
 /**
  * UI object
@@ -87,8 +98,84 @@ typedef struct {
 	uint32_t eCount;
 }UIEvent;
 
+/**
+ * UI sub systems
+ * */
+typedef enum {
+	UI_SUBSYS_GLOBAL,
+	UI_SUBSYS_GAUGE,
+	UI_SUBSYS_MENU,
+	UI_SUBSYS_DEBUG,
+	UI_SUBSYS_DTC,
+	UI_SUBSYS_SELFTEST,
+	UI_SUBSYS_SETTINGS,
+	UI_SUBSYS_ABOUT
+}UISubSys;
+
+/**
+ * UI commands
+ * */
+typedef enum {
+	UI_CMD_GAUGE_LOAD,
+	UI_CMD_GAUGE_UPDATE,
+
+	UI_CMD_DEBUG_UPDATE,
+
+	UI_CMD_DTC_SHOW
+}UICmd;
+
+/**
+ * Gauge update struct for UI update
+ *
+ * paramVal: Most recent parameter value
+ * obdStat: OBD status string
+ * vBat: Battery voltage
+ * */
+typedef struct {
+	int gVal;
+	char gObd[UI_GAUGE_UPDATE_OBD_STAT_MAX_LEN];
+	float gVbat;
+}UIGaugeUpdate;
+
+/**
+ * Gauge load struct. Used to load new gauge UI
+ *
+ * lColour: New colour code to use
+ * lName: Parameter name
+ * lMin: Min arc value
+ * lMax: Max arc value
+ * */
+typedef struct {
+	uint32_t lColour;
+	char lName[UI_GAUGE_LOAD_PARAM_NAME_MAX_LEN];
+	char lUnits[UI_GAUGE_LOAD_PARAM_UNIT_MAX_LEN];
+	int32_t lMin;
+	int32_t lMax;
+}UIGaugeLoad;
+
+/**
+ * UI request struct. Used to request a change to UI
+ *
+ * uSys: UI subsystem to modify
+ * uCmd: UI command to execute
+ * uData: Data associated with request
+ * */
+typedef struct {
+	UISubSys uSys;
+	UICmd uCmd;
+
+	union {
+		UIGaugeUpdate gUpdate;
+		UIGaugeLoad gLoad;
+	} uData;
+}UIRequest;
+
+typedef void (*UIReqCallback) (UIRequest*);
 typedef void (*evtCallback) (lv_event_t*);
 
+/**
+ * UI callback function options
+ * */
 typedef enum {
 	UI_CALLBACK_USE_FOR_ALL,
 	UI_CALLBACK_USE_FOR_SCREEN
@@ -104,6 +191,10 @@ void ui_load_screen(UI* ui);
 void ui_register_event_callback(UI* ui, evtCallback cb, void* uData, UICallbackOpt opt);
 void ui_init_struct(UI* init, lv_obj_t* scrn, lv_obj_t** eventable, uint32_t size);
 void ui_dispatch_event(UID eUid, UIEventCode eCode, uint32_t* eParams, uint32_t eCount);
+uint8_t ui_request_callback_exists(UISubSys uSys);
+void ui_request_register_callback(UISubSys uSys, UIReqCallback cb);
+void ui_handle_request(UIRequest* req);
+void ui_make_request(UIRequest* req);
 void task_dgas_lvgl_update_init(void);
 void task_dgas_lvgl_tick_init(void);
 void task_dgas_ui_init(void);

@@ -33,9 +33,16 @@ static lv_display_t* display;
 static lv_indev_t* indevEnc;
 // UIs
 static UI uiGauge, uiMenu, uiMeas, uiDebug, uiDTC, uiSelfTest, uiSettings, uiAbout;
+// UI request callback functions
+// each UI subsystem should have it's own request callback which it must
+// register with this UI controller
+static UIReqCallback reqCallback[UI_SUBSYS_COUNT];
+
 
 // Out bound queue for UI events
 QueueHandle_t queueUIEvent;
+// In bound queue for UI requests
+QueueHandle_t queueUIRequest;
 
 /**
  * Take UI semaphore
@@ -161,7 +168,7 @@ static void ui_event_callback_meas(lv_event_code_t code, lv_obj_t* focus) {
 			param = GAUGE_PARAM_ID_FUEL_PRESSURE;
 		}
 		uint32_t send = (uint32_t) param;
-		ui_dispatch_event(UI_UID_MEAS, UI_EVENT_MEAS_CHANGE_PARAM, &param, 1);
+		ui_dispatch_event(UI_UID_MEAS, UI_EVENT_MEAS_CHANGE_PARAM, &send, 1);
 		ui_load_screen(&uiGauge);
 	}
 }
@@ -500,16 +507,72 @@ void ui_dispatch_event(UID eUid, UIEventCode eCode, uint32_t* eParams, uint32_t 
 }
 
 /**
+ * Check if request callback is registered with given UI subsystem
+ *
+ * uSys: UI subsystem number
+ *
+ * Return: 1 if callback is already registered, 0 otherwise
+ * */
+uint8_t ui_request_callback_exists(UISubSys uSys) {
+	if (reqCallback[uSys] != 0) {
+		return 1;
+	}
+	return 0;
+}
+
+/**
+ * Register a UI request callback function for given UI subsystem
+ *
+ * uSys: UI subsystem to register callback to
+ * cb: Callback function
+ *
+ * Return: None
+ * */
+void ui_request_register_callback(UISubSys uSys, UIReqCallback cb) {
+	reqCallback[uSys] = cb;
+}
+
+/**
+ * Handle UI request
+ *
+ * req: UI request to handle
+ *
+ * Return: None
+ * */
+void ui_handle_request(UIRequest* req) {
+	UIReqCallback cb = reqCallback[req->uSys];
+
+	if (cb) {
+		cb(req);
+	}
+}
+
+/**
+ * Make UI request
+ *
+ * req: UI request to make
+ *
+ * Return: None
+ * */
+void ui_make_request(UIRequest* req) {
+	xQueueSend(queueUIRequest, req, 0);
+}
+
+/**
  * LVGL update task function.
  *
  * Return: None
  * */
 void task_lvgl(void) {
+	UIRequest req = {0};
+
 	for(;;) {
-		if (ui_take_semaphore() == pdTRUE) {
-			lv_task_handler();
-			ui_give_semaphore();
+		if (queueUIRequest != NULL) {
+			while(xQueueReceive(queueUIRequest, &req, 0) == pdTRUE) {
+				ui_handle_request(&req);
+			}
 		}
+		lv_task_handler();
 		vTaskDelay(5);
 	}
 }
@@ -530,6 +593,7 @@ void task_dgas_ui(void) {
 	task_dgas_lvgl_tick_init();
 	task_dgas_lvgl_update_init();
 	queueUIEvent = xQueueCreate(UI_EVENT_QUEUE_SIZE, sizeof(UIEvent));
+	queueUIRequest = xQueueCreate(UI_REQUEST_QUEUE_SIZE, sizeof(UIRequest));
 
 	for(;;) {
 		vTaskDelay(100);

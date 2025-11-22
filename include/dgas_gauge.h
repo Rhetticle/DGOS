@@ -75,12 +75,6 @@ typedef struct {
 extern QueueHandle_t queueGaugeUpdate;
 extern EventGroupHandle_t eventGaugeParam;
 
-#define GAUGE_ARC_TICK_COUNT			7 // 7 ticks along main gauge arc
-
-#define GAUGE_ANIM_ARC_START_VALUE		0
-#define GAUGE_ANIM_ARC_END_VALUE		4200
-#define GAUGE_ANIM_ARC_STEP_SIZE		150
-
 // event definitions
 #define EVT_GAUGE_PARAM_RPM				1 << 0
 #define EVT_GAUGE_PARAM_SPEED			1 << 1
@@ -101,9 +95,8 @@ extern EventGroupHandle_t eventGaugeParam;
 
 TaskHandle_t task_dgas_get_handle_gauge(void);
 void gauge_animate(void);
-void gauge_adjust_scale_labels(const GaugeParam* param, lv_obj_t** scaleLabels);
 void gauge_load_param(const GaugeParam* param);
-void gauge_update(GaugeUpdate* update);
+void gauge_update(void);
 void gauge_init(void);
 void task_dgas_gauge_init(void);
 

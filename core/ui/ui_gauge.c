@@ -1,0 +1,180 @@
+/*
+ * dgas_ui_gauge.c
+ *
+ *  Created on: 22 Nov. 2025
+ *      Author: rhett
+ */
+
+/**
+ * Gauge UI logic. Tasks which wish to modify gauge UI make request to UI
+ * controller task through ui_gauge_make_request().
+ * */
+
+#include <ui_gauge.h>
+#include <dgas_ui.h>
+#include <stdio.h>
+#include <string.h>
+
+// Most recent gauge update
+static UIGaugeUpdate lastUpdate;
+// Current max value of parameter
+static float gMax;
+
+/**
+ * Perform startup gauge animation
+ *
+ * Return: None
+ * */
+static void gauge_animate(void) {
+	int16_t scale = 0;
+
+	while(scale < UI_GAUGE_ANIM_ARC_END_VALUE) {
+		lv_arc_set_value(objects.gauge_arc, scale);
+		vTaskDelay(5);
+		scale += UI_GAUGE_ANIM_ARC_STEP_SIZE;
+	}
+	while (scale >= UI_GAUGE_ANIM_ARC_START_VALUE) {
+		lv_arc_set_value(objects.gauge_arc, scale);
+		vTaskDelay(5);
+		scale -= UI_GAUGE_ANIM_ARC_STEP_SIZE;
+	}
+}
+
+/**
+ * Adjust scale labels on gauge arc
+ *
+ * min: Min value of new scale
+ * max: Max value of new scale
+ * scaleLabels: Scale label objects
+ *
+ * Return: None
+ * */
+static void ui_gauge_adjust_scale_labels(int32_t min, int32_t max, lv_obj_t** scaleLabels) {
+	uint16_t step = (max - min) / (UI_GAUGE_ARC_TICK_COUNT - 1);
+
+	for (int i = 0; i < UI_GAUGE_ARC_TICK_COUNT; i++) {
+		char buff[UI_GAUGE_TICK_BUFF_LEN];
+		sprintf(buff, "%ld", min + (i * step));
+		lv_label_set_text(scaleLabels[i], buff);
+	}
+}
+
+/**
+ * Load new parameter onto gauge UI
+ *
+ * gLoad: UI gauge load struct
+ *
+ * Return: None
+ * */
+static void ui_gauge_load(UIGaugeLoad* gLoad) {
+	gMax = 0;
+	lv_obj_t* scaleLabels[] = {objects.gauge_tick_0, objects.gauge_tick_1, objects.gauge_tick_2,
+							   objects.gauge_tick_3, objects.gauge_tick_4, objects.gauge_tick_5,
+							   objects.gauge_tick_6};
+
+	lv_arc_set_range(objects.gauge_arc, gLoad->lMin, gLoad->lMax);
+	lv_scale_set_range(objects.gauge_scale, gLoad->lMin, gLoad->lMax);
+	lv_label_set_text(objects.parameter_label, gLoad->lName);
+	lv_label_set_text(objects.param_units_label, gLoad->lUnits);
+
+	// update colour of colour-coded objects
+	lv_obj_set_style_arc_color(objects.gauge_arc, lv_color_hex(gLoad->lColour),
+								LV_PART_INDICATOR | LV_STATE_DEFAULT);
+	lv_obj_set_style_text_color(objects.param_val, lv_color_hex(gLoad->lColour),
+								LV_PART_MAIN | LV_STATE_DEFAULT);
+	lv_obj_set_style_text_color(objects.parameter_label, lv_color_hex(gLoad->lColour),
+								LV_PART_MAIN | LV_STATE_DEFAULT);
+	lv_obj_set_style_text_color(objects.param_max_label, lv_color_hex(gLoad->lColour),
+								LV_PART_MAIN | LV_STATE_DEFAULT);
+	ui_gauge_adjust_scale_labels(gLoad->lMin, gLoad->lMax, scaleLabels);
+}
+
+/**
+ * Update gauge UI
+ *
+ * gUpdate: UI gauge update struct
+ *
+ * Return: None
+ * */
+static void ui_gauge_update(UIGaugeUpdate* gUpdate) {
+	if (gUpdate->gVal != lastUpdate.gVal) {
+		char buff[UI_GAUGE_PARAM_VAL_BUFF_LEN];
+		sprintf(buff, "%i", gUpdate->gVal);
+		// parameter value has changed so update it
+		lv_arc_set_value(objects.gauge_arc, gUpdate->gVal);
+		lv_label_set_text(objects.param_val, buff);
+		if (gUpdate->gVal > lastUpdate.gVal) {
+			// param value has exceeded current maximum so update label
+			lv_label_set_text(objects.param_max_label, buff);
+			gMax = gUpdate->gVal;
+		}
+	}
+	if (strcmp(gUpdate->gObd, lastUpdate.gObd)) {
+		// status string is different so update it
+		lv_label_set_text(objects.obd_status_label, gUpdate->gObd);
+		// update stat
+		strcpy(lastUpdate.gObd, gUpdate->gObd);
+	}
+	if (gUpdate->gVbat != lastUpdate.gVbat) {
+		char buff[UI_GAUGE_VBAT_BUFF_LEN];
+		sprintf(buff, "%.1fV", gUpdate->gVbat);
+		lv_label_set_text(objects.vbat_label, buff);
+	}
+}
+
+/**
+ * Handle a UI request. This function is called by the main
+ * UI controller task (dgas_ui.c)
+ *
+ * req: UI request to execute
+ *
+ * Return: None
+ * */
+static void ui_gauge_handle_request(UIRequest* req) {
+	switch(req->uCmd) {
+	case UI_CMD_GAUGE_LOAD:
+		ui_gauge_load(&req->uData.gLoad);
+		break;
+	case UI_CMD_GAUGE_UPDATE:
+		ui_gauge_update(&req->uData.gUpdate);
+		break;
+	default:
+		break;
+	}
+}
+
+/**
+ * Make a gauge UI request
+ *
+ * cmd: Gauge UI command to execute
+ * arg: Option argument
+ *
+ * Return: None
+ * */
+void ui_gauge_make_request(UICmd cmd, void* arg) {
+	UIRequest req = {0};
+
+	req.uSys = UI_SUBSYS_GAUGE;
+	req.uCmd = cmd;
+
+	if (cmd == UI_CMD_GAUGE_LOAD) {
+		UIGaugeLoad* gLoad = (UIGaugeLoad*) arg;
+		memcpy(&req.uData.gLoad, gLoad, sizeof(UIGaugeLoad));
+	} else if (cmd == UI_CMD_GAUGE_UPDATE) {
+		UIGaugeUpdate* gUpdate = (UIGaugeUpdate*) arg;
+		memcpy(&req.uData.gUpdate, gUpdate, sizeof(UIGaugeUpdate));
+	} else {
+		// invalid command
+		return;
+	}
+	ui_make_request(&req);
+}
+
+/**
+ * Initialise gauge UI. Registers request callback with dgas_ui and performs
+ * startup animation.
+ * */
+void ui_gauge_init(void) {
+	ui_request_register_callback(UI_SUBSYS_GAUGE, &ui_gauge_handle_request);
+	gauge_animate();
+}
