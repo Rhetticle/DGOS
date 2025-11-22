@@ -176,5 +176,5 @@ void ui_gauge_make_request(UICmd cmd, void* arg) {
  * */
 void ui_gauge_init(void) {
 	ui_request_register_callback(UI_SUBSYS_GAUGE, &ui_gauge_handle_request);
-	gauge_animate();
+	//gauge_animate();
 }

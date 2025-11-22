@@ -10,6 +10,7 @@
 #include <dgas_adc.h>
 #include <dgas_obd.h>
 #include <dgas_ui.h>
+#include <ui_gauge.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -39,9 +40,6 @@ TaskHandle_t task_dgas_get_handle_gauge(void) {
  * Return: None
  * */
 void gauge_load_param(const GaugeParam* param) {
-	lv_obj_t* scaleLabels[] = {objects.gauge_tick_0, objects.gauge_tick_1, objects.gauge_tick_2,
-							   objects.gauge_tick_3, objects.gauge_tick_4, objects.gauge_tick_5,
-							   objects.gauge_tick_6};
 	UIGaugeLoad gLoad = {.lColour = param->colour,
 						 .lMax = param->max,
 						 .lMin = param->min};
@@ -53,7 +51,6 @@ void gauge_load_param(const GaugeParam* param) {
 	gState.paramVal = 0;
 	// make request to update gauge UI
 	ui_gauge_make_request(UI_CMD_GAUGE_LOAD, &gLoad);
-
 }
 
 /**

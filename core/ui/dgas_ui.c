@@ -543,6 +543,7 @@ void ui_handle_request(UIRequest* req) {
 	UIReqCallback cb = reqCallback[req->uSys];
 
 	if (cb) {
+		// call the callback function
 		cb(req);
 	}
 }
@@ -565,6 +566,7 @@ void ui_make_request(UIRequest* req) {
  * */
 void task_lvgl(void) {
 	UIRequest req = {0};
+	queueUIRequest = xQueueCreate(UI_REQUEST_QUEUE_SIZE, sizeof(UIRequest));
 
 	for(;;) {
 		if (queueUIRequest != NULL) {
@@ -593,7 +595,6 @@ void task_dgas_ui(void) {
 	task_dgas_lvgl_tick_init();
 	task_dgas_lvgl_update_init();
 	queueUIEvent = xQueueCreate(UI_EVENT_QUEUE_SIZE, sizeof(UIEvent));
-	queueUIRequest = xQueueCreate(UI_REQUEST_QUEUE_SIZE, sizeof(UIRequest));
 
 	for(;;) {
 		vTaskDelay(100);
