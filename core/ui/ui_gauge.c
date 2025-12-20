@@ -45,10 +45,10 @@ static void ui_gauge_animate(void) {
     lv_anim_set_var(&a, objects.gauge_arc);
     lv_anim_set_exec_cb(&a, ui_gauge_animate_cb);
 
-    lv_anim_set_time(&a, 1000);
-    lv_anim_set_values(&a, 0, 4200);
+    lv_anim_set_time(&a, UI_GAUGE_ANIM_TIME);
+    lv_anim_set_values(&a, 0, UI_GAUGE_ANIM_ARC_END_VALUE);
 
-    lv_anim_set_playback_time(&a, 1000);
+    lv_anim_set_playback_time(&a, UI_GAUGE_ANIM_TIME);
 
     lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
 
@@ -192,6 +192,7 @@ void ui_gauge_make_request(UICmd cmd, void* arg) {
  * */
 void ui_gauge_init(void) {
 	ui_request_register_callback(UI_SUBSYS_GAUGE, &ui_gauge_handle_request);
-	//ui_gauge_make_request(UI_CMD_GAUGE_ANIMATE, NULL);
+	ui_gauge_make_request(UI_CMD_GAUGE_ANIMATE, NULL);
+	vTaskDelay(3 * UI_GAUGE_ANIM_TIME);
 	lastUpdate.gVal = -1;
 }

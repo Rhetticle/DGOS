@@ -27,7 +27,7 @@ void create_screen_gauge_main_ui() {
             lv_obj_set_pos(obj, 0, 0);
             lv_obj_set_size(obj, 480, 480);
             lv_arc_set_range(obj, 0, 4200);
-            lv_arc_set_value(obj, 700);
+            lv_arc_set_value(obj, 0);
             lv_arc_set_bg_start_angle(obj, 135);
             lv_arc_set_bg_end_angle(obj, 45);
             lv_obj_set_style_arc_color(obj, lv_color_hex(0xff00ff00), LV_PART_INDICATOR | LV_STATE_DEFAULT);

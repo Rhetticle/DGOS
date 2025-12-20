@@ -560,44 +560,29 @@ void ui_make_request(UIRequest* req) {
 }
 
 /**
- * LVGL update task function.
- *
- * Return: None
- * */
-void task_lvgl(void) {
-
-	for(;;) {
-		lv_task_handler();
-		vTaskDelay(5);
-	}
-}
-
-/**
  * Thread function for DGAS UI task
  *
  * Return: None
  * */
 void task_dgas_ui(void) {
+	UIRequest req = {0};
 	semaphoreUI = xSemaphoreCreateBinary();
+	queueUIEvent = xQueueCreate(UI_EVENT_QUEUE_SIZE, sizeof(UIEvent));
+	queueUIRequest = xQueueCreate(UI_REQUEST_QUEUE_SIZE, sizeof(UIRequest));
 	ui_give_semaphore();
 	ui_init_lvgl();
 	// EEZ init
 	ui_init();
 	ui_init_all_uis();
 	task_dgas_lvgl_tick_init();
-	task_dgas_lvgl_update_init();
 	ui_load_screen(&uiGauge);
-	queueUIEvent = xQueueCreate(UI_EVENT_QUEUE_SIZE, sizeof(UIEvent));
-	UIRequest req = {0};
-	queueUIRequest = xQueueCreate(UI_REQUEST_QUEUE_SIZE, sizeof(UIRequest));
 
 	for(;;) {
-		if (queueUIRequest != NULL) {
-			while(xQueueReceive(queueUIRequest, &req, 0) == pdTRUE) {
-				ui_handle_request(&req);
-			}
+		while(xQueueReceive(queueUIRequest, &req, 0) == pdTRUE) {
+			ui_handle_request(&req);
 		}
-		vTaskDelay(100);
+		lv_task_handler();
+		vTaskDelay(5);
 	}
 }
 
@@ -612,16 +597,6 @@ void task_lvgl_tick(void) {
 		lv_tick_inc(1);
 		vTaskDelay(1);
 	}
-}
-
-/**
- * Initialise LVGL update/drawing task
- *
- * Return: None
- * */
-void task_dgas_lvgl_update_init(void) {
-	xTaskCreate((void*) &task_lvgl, "TaskLVGL", TASK_DGAS_LVGL_UPDATE_STACK_SIZE,
-			NULL, TASK_DGAS_LVGL_UPDATE_PRIORITY, &taskHandleLVGLUpdate);
 }
 
 /**

@@ -17,8 +17,6 @@
 // functions is quite long. The LVGL tick task should have the highest priority
 #define TASK_DGAS_UI_STACK_SIZE 			(configMINIMAL_STACK_SIZE * 8)
 #define TASK_DGAS_UI_PRIORITY 				(tskIDLE_PRIORITY + 7)
-#define TASK_DGAS_LVGL_UPDATE_STACK_SIZE 	(configMINIMAL_STACK_SIZE * 12)
-#define TASK_DGAS_LVGL_UPDATE_PRIORITY 		(tskIDLE_PRIORITY + 7)
 #define TASK_DGAS_LVGL_TICK_STACK_SIZE		(configMINIMAL_STACK_SIZE * 2)
 #define TASK_DGAS_LVGL_TICK_PRIORITY		(tskIDLE_PRIORITY + 8)
 
