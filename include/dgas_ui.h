@@ -23,6 +23,7 @@
 #define UI_EVENT_PARAMS_MAX		32
 #define UI_EVENT_QUEUE_SIZE		8
 
+#define UI_REQUEST_DATA_MAX		128
 #define UI_REQUEST_PARAM_MAX	32
 #define UI_REQUEST_STRING_MAX	32
 #define UI_REQUEST_QUEUE_SIZE	8
@@ -120,7 +121,12 @@ typedef enum {
 
 	UI_CMD_DEBUG_UPDATE,
 
-	UI_CMD_DTC_SHOW
+	UI_CMD_DTC_SHOW,
+
+	UI_CMD_SELFTEST_OBJS_HIDE,
+	UI_CMD_SELFTEST_OBJS_SHOW,
+	UI_CMD_SELFTEST_UPDATE_PROGBAR,
+	UI_CMD_SELFTEST_SHOW_REPORT
 }UICmd;
 
 /**
@@ -153,6 +159,51 @@ typedef struct {
 }UIGaugeLoad;
 
 /**
+ * UI accelerometer self test statistics
+ *
+ * aX: Acceleration in x axis (g's)
+ * aY: Acceleration in y axis (g's)
+ * aZ: Acceleration in z axis (g's)
+ * aWhoAmI: Value of who am I register
+ * */
+typedef struct {
+	float aX;
+	float aZ;
+	float aY;
+	uint8_t aWhoAmI;
+}UISelfTestAccStats;
+
+/**
+ * UI memory device self test statistics
+ *
+ * mUsed: Used memory (MiB)
+ * mFree: Free memory (MiB)
+ * mReadTime: Time taken to read (ms)
+ * mWriteTime: Time taken to write (ms)
+ * */
+typedef struct {
+	uint32_t mUsed;
+	uint32_t mFree;
+	uint32_t mReadTime;
+	uint32_t mWriteTime;
+}UISelfTestMemStats;
+
+/**
+ * UISelfTestReport struct
+ *
+ * sDest: Destination textarea to display device report
+ * sAcc: Accelerometer self test statistics
+ * sMem: Memory device self test statistics
+ * */
+typedef struct {
+	lv_obj_t* sDest;
+	union {
+		UISelfTestAccStats sAcc;
+		UISelfTestMemStats sMem;
+	} sDesc;
+}UISelfTestReport;
+
+/**
  * UI request struct. Used to request a change to UI
  *
  * uSys: UI subsystem to modify
@@ -162,11 +213,7 @@ typedef struct {
 typedef struct {
 	UISubSys uSys;
 	UICmd uCmd;
-
-	union {
-		UIGaugeUpdate gUpdate;
-		UIGaugeLoad gLoad;
-	} uData;
+	uint8_t uData[UI_REQUEST_DATA_MAX];
 }UIRequest;
 
 typedef void (*UIReqCallback) (UIRequest*);

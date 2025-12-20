@@ -147,12 +147,18 @@ static void ui_gauge_update(UIGaugeUpdate* gUpdate) {
  * */
 static void ui_gauge_handle_request(UIRequest* req) {
 	switch(req->uCmd) {
-	case UI_CMD_GAUGE_LOAD:
-		ui_gauge_load(&req->uData.gLoad);
+	case UI_CMD_GAUGE_LOAD: {
+		UIGaugeLoad gLoad = {0};
+		memcpy(&gLoad, req->uData, sizeof(UIGaugeLoad));
+		ui_gauge_load(&gLoad);
 		break;
-	case UI_CMD_GAUGE_UPDATE:
-		ui_gauge_update(&req->uData.gUpdate);
+	}
+	case UI_CMD_GAUGE_UPDATE: {
+		UIGaugeUpdate gUpdate = {0};
+		memcpy(&gUpdate, req->uData, sizeof(UIGaugeUpdate));
+		ui_gauge_update(&gUpdate);
 		break;
+	}
 	case UI_CMD_GAUGE_ANIMATE:
 		ui_gauge_animate();
 		break;
@@ -178,10 +184,10 @@ void ui_gauge_make_request(UICmd cmd, void* arg) {
 
 	if (cmd == UI_CMD_GAUGE_LOAD) {
 		UIGaugeLoad* gLoad = (UIGaugeLoad*) arg;
-		memcpy(&req.uData.gLoad, gLoad, sizeof(UIGaugeLoad));
+		memcpy(req.uData, gLoad, sizeof(UIGaugeLoad));
 	} else if (cmd == UI_CMD_GAUGE_UPDATE) {
 		UIGaugeUpdate* gUpdate = (UIGaugeUpdate*) arg;
-		memcpy(&req.uData.gUpdate, gUpdate, sizeof(UIGaugeUpdate));
+		memcpy(req.uData, gUpdate, sizeof(UIGaugeUpdate));
 	}
 	ui_make_request(&req);
 }

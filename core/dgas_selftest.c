@@ -16,64 +16,6 @@
 static TaskHandle_t taskHandleSelfTest;
 
 /**
- * Hide self test report objects (objects are hidden until test is done)
- *
- * Return: None
- * */
-static void hide_report_objs(void) {
-	lv_obj_add_flag(objects.self_test_progress_bar, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_add_flag(objects.self_test_accel_icon, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_add_flag(objects.self_test_accel_label, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_add_flag(objects.self_test_accel_textarea, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_add_flag(objects.self_test_dram_icon, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_add_flag(objects.self_test_dram_label, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_add_flag(objects.self_test_dram_textarea, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_add_flag(objects.self_test_flash_icon, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_add_flag(objects.self_test_flash_label, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_add_flag(objects.self_test_flash_textarea, LV_OBJ_FLAG_HIDDEN);
-}
-
-/**
- * Show self test report objects
- *
- * Return: None
- * */
-static void show_report_objs(void) {
-	lv_obj_add_flag(objects.self_test_progress_bar, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_clear_flag(objects.self_test_accel_icon, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_clear_flag(objects.self_test_accel_label, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_clear_flag(objects.self_test_accel_textarea, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_clear_flag(objects.self_test_dram_icon, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_clear_flag(objects.self_test_dram_label, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_clear_flag(objects.self_test_dram_textarea, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_clear_flag(objects.self_test_flash_icon, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_clear_flag(objects.self_test_flash_label, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_clear_flag(objects.self_test_flash_textarea, LV_OBJ_FLAG_HIDDEN);
-}
-
-/**
- * Clear textareas for self test results
- *
- * Return: None
- * */
-static void clear_report_textareas(void) {
-	lv_textarea_set_text(objects.self_test_dram_textarea, "");
-	lv_textarea_set_text(objects.self_test_flash_textarea, "");
-	lv_textarea_set_text(objects.self_test_accel_textarea, "");
-}
-
-/**
- * Update self test progress bar with given value
- *
- * value: Value to set progress bar to
- *
- * Return: None
- * */
-static void update_progress_bar(uint32_t value) {
-	lv_bar_set_value(objects.self_test_progress_bar, value, 0);
-}
-
-/**
  * Calculate total time taken to run memory device self test
  *
  * mDesc: Memory test descriptor
