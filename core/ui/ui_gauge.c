@@ -21,23 +21,38 @@ static UIGaugeUpdate lastUpdate;
 static float gMax;
 
 /**
+ * LVGL animation callback function to animate the gauge
+ * arc on startup
+ *
+ * var: Arc object
+ * val: Value to set arc to
+ *
+ * Return: None
+ * */
+static void ui_gauge_animate_cb(void* var, int32_t val) {
+	lv_arc_set_value((lv_obj_t*) var, val);
+}
+
+/**
  * Perform startup gauge animation
  *
  * Return: None
  * */
-static void gauge_animate(void) {
-	int16_t scale = 0;
+static void ui_gauge_animate(void) {
+    lv_anim_t a;
+    lv_anim_init(&a);
 
-	while(scale < UI_GAUGE_ANIM_ARC_END_VALUE) {
-		lv_arc_set_value(objects.gauge_arc, scale);
-		vTaskDelay(5);
-		scale += UI_GAUGE_ANIM_ARC_STEP_SIZE;
-	}
-	while (scale >= UI_GAUGE_ANIM_ARC_START_VALUE) {
-		lv_arc_set_value(objects.gauge_arc, scale);
-		vTaskDelay(5);
-		scale -= UI_GAUGE_ANIM_ARC_STEP_SIZE;
-	}
+    lv_anim_set_var(&a, objects.gauge_arc);
+    lv_anim_set_exec_cb(&a, ui_gauge_animate_cb);
+
+    lv_anim_set_time(&a, 1000);
+    lv_anim_set_values(&a, 0, 4200);
+
+    lv_anim_set_playback_time(&a, 1000);
+
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
+
+    lv_anim_start(&a);
 }
 
 /**
@@ -138,7 +153,11 @@ static void ui_gauge_handle_request(UIRequest* req) {
 	case UI_CMD_GAUGE_UPDATE:
 		ui_gauge_update(&req->uData.gUpdate);
 		break;
+	case UI_CMD_GAUGE_ANIMATE:
+		ui_gauge_animate();
+		break;
 	default:
+		// invalid command
 		break;
 	}
 }
@@ -163,9 +182,6 @@ void ui_gauge_make_request(UICmd cmd, void* arg) {
 	} else if (cmd == UI_CMD_GAUGE_UPDATE) {
 		UIGaugeUpdate* gUpdate = (UIGaugeUpdate*) arg;
 		memcpy(&req.uData.gUpdate, gUpdate, sizeof(UIGaugeUpdate));
-	} else {
-		// invalid command
-		return;
 	}
 	ui_make_request(&req);
 }
@@ -176,5 +192,6 @@ void ui_gauge_make_request(UICmd cmd, void* arg) {
  * */
 void ui_gauge_init(void) {
 	ui_request_register_callback(UI_SUBSYS_GAUGE, &ui_gauge_handle_request);
-	//gauge_animate();
+	//ui_gauge_make_request(UI_CMD_GAUGE_ANIMATE, NULL);
+	lastUpdate.gVal = -1;
 }

@@ -94,7 +94,7 @@ void gauge_set_obd_status_string(char* dest, OBDStatus status) {
  * */
 void gauge_init(void) {
 	ui_gauge_init();
-	gauge_load_param(&paramCoolant);
+	//gauge_load_param(&paramCoolant);
 }
 
 /**
@@ -186,18 +186,21 @@ void task_dgas_gauge(void) {
 	EventBits_t uxBits;
 	queueGaugeUpdate = xQueueCreate(1, sizeof(GaugeUpdate));
 	eventGaugeParam = xEventGroupCreate();
+	vTaskDelay(5000);
 	gauge_init();
 
 	for(;;) {
+		/*
 		if (gauge_update_state(gState.param->pid, 100) == 0) {
-			// got successfull PID value so update gauge
+			// got successful PID value so update gauge
 			gauge_update();
 		}
 		if ((uxBits = xEventGroupWaitBits(eventGaugeParam, EVT_GAUGE_PARAM, pdTRUE, pdFALSE, 10))) {
 			// change parameter event occured
 			gauge_param_change_handler(uxBits);
-		}
-		vTaskDelay(10);
+		}*/
+		ui_gauge_make_request(UI_CMD_GAUGE_ANIMATE, NULL);
+		vTaskDelay(5000);
 	}
 }
 

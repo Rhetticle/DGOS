@@ -565,15 +565,8 @@ void ui_make_request(UIRequest* req) {
  * Return: None
  * */
 void task_lvgl(void) {
-	UIRequest req = {0};
-	queueUIRequest = xQueueCreate(UI_REQUEST_QUEUE_SIZE, sizeof(UIRequest));
 
 	for(;;) {
-		if (queueUIRequest != NULL) {
-			while(xQueueReceive(queueUIRequest, &req, 0) == pdTRUE) {
-				ui_handle_request(&req);
-			}
-		}
 		lv_task_handler();
 		vTaskDelay(5);
 	}
@@ -591,12 +584,19 @@ void task_dgas_ui(void) {
 	// EEZ init
 	ui_init();
 	ui_init_all_uis();
-	ui_load_screen(&uiGauge);
 	task_dgas_lvgl_tick_init();
 	task_dgas_lvgl_update_init();
+	ui_load_screen(&uiGauge);
 	queueUIEvent = xQueueCreate(UI_EVENT_QUEUE_SIZE, sizeof(UIEvent));
+	UIRequest req = {0};
+	queueUIRequest = xQueueCreate(UI_REQUEST_QUEUE_SIZE, sizeof(UIRequest));
 
 	for(;;) {
+		if (queueUIRequest != NULL) {
+			while(xQueueReceive(queueUIRequest, &req, 0) == pdTRUE) {
+				ui_handle_request(&req);
+			}
+		}
 		vTaskDelay(100);
 	}
 }

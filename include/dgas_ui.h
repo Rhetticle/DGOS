@@ -16,7 +16,7 @@
 // it should have a reasonably large stack as the call chain of most LVGL
 // functions is quite long. The LVGL tick task should have the highest priority
 #define TASK_DGAS_UI_STACK_SIZE 			(configMINIMAL_STACK_SIZE * 8)
-#define TASK_DGAS_UI_PRIORITY 				(tskIDLE_PRIORITY + 3)
+#define TASK_DGAS_UI_PRIORITY 				(tskIDLE_PRIORITY + 7)
 #define TASK_DGAS_LVGL_UPDATE_STACK_SIZE 	(configMINIMAL_STACK_SIZE * 12)
 #define TASK_DGAS_LVGL_UPDATE_PRIORITY 		(tskIDLE_PRIORITY + 7)
 #define TASK_DGAS_LVGL_TICK_STACK_SIZE		(configMINIMAL_STACK_SIZE * 2)
@@ -29,8 +29,8 @@
 #define UI_REQUEST_STRING_MAX	32
 #define UI_REQUEST_QUEUE_SIZE	8
 
-#define UI_GAUGE_UPDATE_OBD_STAT_MAX_LEN	8
-#define UI_GAUGE_LOAD_PARAM_NAME_MAX_LEN	8
+#define UI_GAUGE_UPDATE_OBD_STAT_MAX_LEN	32
+#define UI_GAUGE_LOAD_PARAM_NAME_MAX_LEN	32
 #define UI_GAUGE_LOAD_PARAM_UNIT_MAX_LEN	8
 
 #define UI_SUBSYS_COUNT		10
@@ -118,6 +118,7 @@ typedef enum {
 typedef enum {
 	UI_CMD_GAUGE_LOAD,
 	UI_CMD_GAUGE_UPDATE,
+	UI_CMD_GAUGE_ANIMATE,
 
 	UI_CMD_DEBUG_UPDATE,
 

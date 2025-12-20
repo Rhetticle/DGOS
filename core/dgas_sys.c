@@ -153,13 +153,13 @@ uint32_t dgas_sys_boot(void) {
 		return DGAS_SYS_BOOT_ERROR_OBD;
 	}
 	task_dgas_gauge_init();
-	if (dgas_sys_wait_on_object((void**)&queueGaugeUpdate, DGAS_SYS_BOOT_TIMEOUT_UI) != 0) {
-		return DGAS_SYS_BOOT_ERROR_UI;
-	}
-	task_dgas_debug_init();
-	if (dgas_sys_wait_on_object((void**)&queueDebug, DGAS_SYS_BOOT_TIMEOUT_UI) != 0) {
-		return DGAS_SYS_BOOT_ERROR_UI;
-	}
+	//if (dgas_sys_wait_on_object((void**)&queueGaugeUpdate, DGAS_SYS_BOOT_TIMEOUT_UI) != 0) {
+	//	return DGAS_SYS_BOOT_ERROR_UI;
+	//}
+	//task_dgas_debug_init();
+	//if (dgas_sys_wait_on_object((void**)&queueDebug, DGAS_SYS_BOOT_TIMEOUT_UI) != 0) {
+	//	return DGAS_SYS_BOOT_ERROR_UI;
+	//}
 	return DGAS_SYS_BOOT_OK;
 }
 
