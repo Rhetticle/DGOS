@@ -125,7 +125,11 @@ typedef enum {
 
 	UI_CMD_SELFTEST_OBJS_HIDE,
 	UI_CMD_SELFTEST_OBJS_SHOW,
-	UI_CMD_SELFTEST_UPDATE_PROGBAR,
+	UI_CMD_SELFTEST_PROGBAR_HIDE,
+	UI_CMD_SELFTEST_PROGBAR_UPDATE,
+	UI_CMD_SELFTEST_PROGBAR_SHOW,
+	UI_CMD_SELFTEST_RUN_HIDE,
+	UI_CMD_SELFTEST_RUN_SHOW,
 	UI_CMD_SELFTEST_SHOW_REPORT
 }UICmd;
 
@@ -182,10 +186,10 @@ typedef struct {
  * mWriteTime: Time taken to write (ms)
  * */
 typedef struct {
-	uint32_t mUsed;
-	uint32_t mFree;
 	uint32_t mReadTime;
-	uint32_t mWriteTime;
+	uint32_t mSpeed;
+	uint32_t mUsed;
+	uint32_t mTime;
 }UISelfTestMemStats;
 
 /**
@@ -197,10 +201,9 @@ typedef struct {
  * */
 typedef struct {
 	lv_obj_t* sDest;
-	union {
-		UISelfTestAccStats sAcc;
-		UISelfTestMemStats sMem;
-	} sDesc;
+	UISelfTestAccStats sAcc;
+	UISelfTestMemStats sFlash;
+	UISelfTestMemStats sDram;
 }UISelfTestReport;
 
 /**

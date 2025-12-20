@@ -6,6 +6,7 @@
  */
 
 #include <dgas_selftest.h>
+#include <ui_selftest.h>
 #include <dgas_ui.h>
 #include <device.h>
 #include <accelerometer.h>
@@ -49,101 +50,6 @@ static uint32_t memory_calc_speed(MemTestDesc* mDesc) {
 	uint32_t size = memory_calc_size(mDesc);
 
 	return (size / CONV_MS_TO_S(time));
-}
-
-/**
- * Display statistic of memory device
- *
- * mDesc: Memory test descriptor
- * ta: Textarea to display results to
- *
- * Return: None
- * */
-static void display_memory_device_statistics(MemTestDesc* mDesc, lv_obj_t* ta) {
-	char statistic[DEVICE_STATISTIC_MSG_MAX];
-
-	sprintf(statistic, "Read Time: %ldms\n", mDesc->readTime);
-	lv_textarea_add_text(ta, statistic);
-
-	sprintf(statistic, "Speed: %ldMiB/s\n", memory_calc_speed(mDesc));
-	lv_textarea_add_text(ta, statistic);
-
-	sprintf(statistic, "Used: %.1fKiB\n", memory_calc_size(mDesc));
-	lv_textarea_add_text(ta, statistic);
-
-	sprintf(statistic, "Test Time: %ldms\n", memory_calc_test_time(mDesc));
-	lv_textarea_add_text(ta, statistic);
-}
-
-/**
- * Display accelerometer statistics
- *
- * aDesc: Accelerometer test descriptor
- *
- * Return: None
- * */
-static void display_accelerometer_statistics(AccTestDesc* aDesc) {
-	char statistic[DEVICE_STATISTIC_MSG_MAX];
-
-	sprintf(statistic, "WhoAmI: 0x%X\n", aDesc->whoAmI);
-	lv_textarea_add_text(objects.self_test_accel_textarea, statistic);
-
-	sprintf(statistic, "X-Axis: %.1f g\n", aDesc->aData.accX);
-	lv_textarea_add_text(objects.self_test_accel_textarea, statistic);
-	sprintf(statistic, "Y-Axis: %.1f g\n", aDesc->aData.accY);
-	lv_textarea_add_text(objects.self_test_accel_textarea, statistic);
-	sprintf(statistic, "Z-Axis: %.1f g\n", aDesc->aData.accZ);
-	lv_textarea_add_text(objects.self_test_accel_textarea, statistic);
-}
-
-/**
- * Display results of a memory device self test
- *
- * mDesc: Pointer to memory test descriptor of device
- * ta: Textarea to display results to
- *
- * Return: None
- * */
-static void display_memory_device_report(MemTestDesc* mDesc, lv_obj_t* ta) {
-	if ((mDesc->readFailAddr == 0) && (mDesc->writeFailAddr == 0)) {
-		lv_textarea_add_text(ta, "#00FF00 PASS#\n");
-		display_memory_device_statistics(mDesc, ta);
-		return;
-	}
-	char errorMsg[DEVICE_REPORT_MSG_MAX];
-	lv_textarea_add_text(ta, "#FF0000 ERROR#\n");
-
-	if (mDesc->readFailAddr != 0) {
-		sprintf(errorMsg, "Read failure at 0x%lX\n", mDesc->readFailAddr);
-		lv_textarea_add_text(ta, errorMsg);
-	}
-	if (mDesc->writeFailAddr != 0) {
-		sprintf(errorMsg, "Write failure at 0x%lX\n", mDesc->writeFailAddr);
-		lv_textarea_add_text(ta, errorMsg);
-	}
-}
-
-/**
- * Display accelerometer self test report
- *
- * aDesc: Accelerometer test descriptor
- *
- * Return: None
- * */
-static void display_accelerometer_test_report(AccTestDesc* aDesc) {
-	if (aDesc->whoAmI == ACC_WHO_AM_I) {
-		lv_textarea_add_text(objects.self_test_accel_textarea, "#00FF00 PASS#\n");
-		display_accelerometer_statistics(aDesc);
-		return;
-	}
-	char errorMsg[DEVICE_REPORT_MSG_MAX];
-	lv_textarea_add_text(objects.self_test_accel_textarea, "#FF0000 \uf00d#\n");
-
-	if (aDesc->whoAmI != ACC_WHO_AM_I) {
-		sprintf(errorMsg, "WhoAmI register value wrong, got 0x%X expected 0x%X\n",
-				aDesc->whoAmI, ACC_WHO_AM_I);
-		lv_textarea_add_text(objects.self_test_accel_textarea, errorMsg);
-	}
 }
 
 /**
@@ -217,6 +123,53 @@ DeviceStatus dgas_self_test_flash(MemTestDesc* mDesc) {
 }
 
 /**
+ * Populate UISelfTestAccStats struct from accelerometer test descriptor
+ *
+ * dest: Destination struct
+ * aDesc: Accelerometer test descriptor
+ *
+ * Return: None
+ * */
+void selftest_populate_acc_results(UISelfTestAccStats* dest, AccTestDesc* aDesc) {
+	dest->aWhoAmI = aDesc->whoAmI;
+	dest->aX = aDesc->aData.accX;
+	dest->aY = aDesc->aData.accY;
+	dest->aZ = aDesc->aData.accZ;
+}
+
+/**
+ * Populate UISelfTestMemStats struct from memory device test descriptor
+ *
+ * dest: Destination struct
+ * mDesc: Memory device test descriptor
+ *
+ * Return: None
+ * */
+void selftest_populate_mem_results(UISelfTestMemStats* dest, MemTestDesc* mDesc) {
+	dest->mReadTime = mDesc->readTime;
+	dest->mSpeed = memory_calc_speed(mDesc);
+	dest->mTime = memory_calc_test_time(mDesc);
+	dest->mUsed = memory_calc_size(mDesc);
+}
+
+/**
+ * Show self test results on UI
+ *
+ * aDesc: Accelerometer test descriptor
+ * dDesc: DRAM test descriptor
+ * fDesc: Flash test descriptor
+ *
+ * Return: None
+ * */
+void selftest_show_results(AccTestDesc* aDesc, MemTestDesc* dDesc, MemTestDesc* fDesc) {
+	UISelfTestReport rep = {0};
+	selftest_populate_acc_results(&rep.sAcc, aDesc);
+	//selftest_populate_mem_results(&rep.sDram, dDesc);
+	//selftest_populate_mem_results(&rep.sFlash, fDesc);
+	ui_selftest_make_request(UI_CMD_SELFTEST_SHOW_REPORT, &rep);
+}
+
+/**
  * Run the complete DGAS hardware self test
  *
  * Return: Status indicating success or failure
@@ -225,25 +178,32 @@ DeviceStatus dgas_self_test(void) {
 	MemTestDesc flashTest = {0};
 	MemTestDesc dramTest = {0};
 	AccTestDesc accTest = {0};
+	int32_t progress = 0;
 
-	hide_report_objs();
-	lv_obj_clear_flag(objects.self_test_progress_bar, LV_OBJ_FLAG_HIDDEN);
-	update_progress_bar(0);
+
+	ui_selftest_make_request(UI_CMD_SELFTEST_OBJS_HIDE, NULL);
+	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_SHOW, NULL);
+	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_UPDATE, &progress);
 	// accelerometer self test
 	dgas_self_test_accelerometer(&accTest);
-	update_progress_bar(33);
+	progress = 33;
+	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_UPDATE, &progress);
 	// DRAM self test
 	// dgas_self_test_dram(&dramTest);
-	update_progress_bar(67);
+	progress = 67;
+	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_UPDATE, &progress);
 	// External flash self test
 	//dgas_self_test_flash(&flashTest);
-	update_progress_bar(100);
+	progress = 100;
+	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_UPDATE, &progress);
 
-	show_report_objs();
-	clear_report_textareas();
-	display_memory_device_report(&dramTest, objects.self_test_dram_textarea);
-	//display_memory_device_report(&flashTest, objects.self_test_flash_textarea);
-	display_accelerometer_test_report(&accTest);
+	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_HIDE, NULL);
+	ui_selftest_make_request(UI_CMD_SELFTEST_OBJS_SHOW, NULL);
+	selftest_show_results(&accTest, &dramTest, &flashTest);
+}
+
+void dgas_selftest_init(void) {
+	ui_selftest_init();
 }
 
 /**

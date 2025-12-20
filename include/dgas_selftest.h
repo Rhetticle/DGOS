@@ -10,10 +10,8 @@
 
 #include <dgas_types.h>
 #include <accelerometer.h>
+#include <device.h>
 #include <math.h>
-
-#define DEVICE_REPORT_MSG_MAX 100
-#define DEVICE_STATISTIC_MSG_MAX 32
 
 #define CONV_BYTES_TO_KIB(x) 		(x / pow(2, 10))
 #define CONV_BYTES_TO_MIB(x) 		(x / pow(2, 20))
@@ -55,5 +53,7 @@ typedef struct {
 } MemTestDesc;
 
 TaskHandle_t dgas_self_test_get_handle(void);
+void dgas_selftest_init(void);
+DeviceStatus dgas_self_test(void);
 
 #endif /* DGOS_INCLUDE_DGAS_SELFTEST_H_ */

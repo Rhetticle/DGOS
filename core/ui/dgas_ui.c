@@ -129,6 +129,7 @@ static void ui_event_callback_menu(lv_event_code_t code, lv_obj_t* focus) {
 			ui_load_screen(&uiDTC);
 		} else if (focus == objects.self_test_btn) {
 			ui_load_screen(&uiSelfTest);
+			ui_dispatch_event(UI_UID_SELFTEST, UI_EVENT_SELFTEST_RUN, NULL, 0);
 		} else if (focus == objects.settings_btn) {
 			ui_load_screen(&uiSettings);
 		} else if (focus == objects.about_btn) {
