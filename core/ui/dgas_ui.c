@@ -221,6 +221,11 @@ static void ui_event_callback_dtc(lv_event_code_t code, lv_obj_t* focus) {
 static void ui_event_callback_self_test(lv_event_code_t code, lv_obj_t* focus) {
 	if (code == LV_EVENT_CLICKED) {
 		if (focus == objects.self_test_exit_btn) {
+			UIRequest req = {0};
+			req.uSys = UI_SUBSYS_SELFTEST;
+			req.uCmd = UI_CMD_SELFTEST_OBJS_HIDE;
+
+			ui_make_request(&req);
 			ui_load_screen(&uiMenu);
 		} else if (focus == objects.self_test_run_btn) {
 		}

@@ -180,7 +180,6 @@ DeviceStatus dgas_self_test(void) {
 	AccTestDesc accTest = {0};
 	int32_t progress = 0;
 
-
 	ui_selftest_make_request(UI_CMD_SELFTEST_OBJS_HIDE, NULL);
 	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_SHOW, NULL);
 	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_UPDATE, &progress);
@@ -200,6 +199,7 @@ DeviceStatus dgas_self_test(void) {
 	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_HIDE, NULL);
 	ui_selftest_make_request(UI_CMD_SELFTEST_OBJS_SHOW, NULL);
 	selftest_show_results(&accTest, &dramTest, &flashTest);
+	return DEV_OK;
 }
 
 void dgas_selftest_init(void) {

@@ -181,7 +181,7 @@ void task_dgas_sys(void) {
 			xQueueReceive(queueAccelerometerData, &data, 10);
 		}
 		if (queueUIEvent != NULL) {
-			if (xQueueReceive(queueUIEvent, &evt, 00) == pdTRUE) {
+			if (xQueueReceive(queueUIEvent, &evt, 0) == pdTRUE) {
 				handle_ui_event(&evt);
 			}
 		}

@@ -1352,6 +1352,15 @@ void create_screen_self_test() {
             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
         }
     }
+	lv_obj_add_flag(objects.self_test_accel_icon, LV_OBJ_FLAG_HIDDEN);
+	lv_obj_add_flag(objects.self_test_accel_label, LV_OBJ_FLAG_HIDDEN);
+	lv_obj_add_flag(objects.self_test_accel_textarea, LV_OBJ_FLAG_HIDDEN);
+	lv_obj_add_flag(objects.self_test_dram_icon, LV_OBJ_FLAG_HIDDEN);
+	lv_obj_add_flag(objects.self_test_dram_label, LV_OBJ_FLAG_HIDDEN);
+	lv_obj_add_flag(objects.self_test_dram_textarea, LV_OBJ_FLAG_HIDDEN);
+	lv_obj_add_flag(objects.self_test_flash_icon, LV_OBJ_FLAG_HIDDEN);
+	lv_obj_add_flag(objects.self_test_flash_label, LV_OBJ_FLAG_HIDDEN);
+	lv_obj_add_flag(objects.self_test_flash_textarea, LV_OBJ_FLAG_HIDDEN);
 }
 
 void tick_screen_self_test() {
