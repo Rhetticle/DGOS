@@ -12,9 +12,8 @@
 #include <bus.h>
 #include <dgas_obd.h>
 
-#define DGAS_DEBUG_MSG_LEN						256
-#define DGAS_DEBUG_BUFF_LEN						256
-#define DGAS_DEBUG_WINDOW_MAX_TEXT				300
+#define DGAS_DEBUG_MSG_LEN						128
+#define DGAS_DEBUG_BUFF_LEN						128
 
 /************************ FreeRTOS *********************/
 

@@ -11,6 +11,7 @@
  */
 
 #include <dgas_debug.h>
+#include <ui_debug.h>
 #include <dgas_obd.h>
 #include <kwp.h>
 #include <dgas_ui.h>
@@ -254,16 +255,7 @@ void dgas_debug_log_message(char* message) {
  * Return: None
  * */
 void dgas_debug_flush(void) {
-	lv_obj_t* label = lv_textarea_get_label(objects.obd2_debug_textarea);
-
-	if (ui_take_semaphore() == pdTRUE) {
-		if (strlen(lv_label_get_text(label)) > DGAS_DEBUG_WINDOW_MAX_TEXT) {
-			// clear textarea to stop text from overflowing
-			lv_textarea_set_text(objects.obd2_debug_textarea, "");
-		}
-		lv_textarea_add_text(objects.obd2_debug_textarea, debugLog);
-		ui_give_semaphore();
-	}
+	ui_debug_make_request(UI_CMD_DEBUG_FLUSH, debugLog);
 	memset(debugLog, 0, sizeof(debugLog));
 }
 
@@ -291,12 +283,13 @@ void task_debug(void) {
 	DebugMsg msg = {0};
 	debugPaused = false;
 	queueDebug = xQueueCreate(DGAS_DEBUG_QUEUE_LEN, sizeof(DebugMsg));
+	ui_debug_init();
 
 	for(;;) {
 		if (xQueueReceive(queueDebug, &msg, 0) == pdTRUE) {
 			dgas_debug_handle_message(&msg);
 
-			if ((lv_screen_active() == objects.obd2_debug) && !debugPaused) {
+			if (!debugPaused) {
 				// only flush to UI if debug screen is active and debugger is not paused
 				dgas_debug_flush();
 			}

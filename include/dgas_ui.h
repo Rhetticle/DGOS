@@ -32,6 +32,8 @@
 #define UI_GAUGE_LOAD_PARAM_NAME_MAX_LEN	32
 #define UI_GAUGE_LOAD_PARAM_UNIT_MAX_LEN	8
 
+#define UI_DEBUG_FLUSH_STR_LEN		256
+
 #define UI_SUBSYS_COUNT		10
 
 extern QueueHandle_t queueUIEvent;
@@ -119,7 +121,7 @@ typedef enum {
 	UI_CMD_GAUGE_UPDATE,
 	UI_CMD_GAUGE_ANIMATE,
 
-	UI_CMD_DEBUG_UPDATE,
+	UI_CMD_DEBUG_FLUSH,
 
 	UI_CMD_DTC_SHOW,
 
@@ -157,6 +159,16 @@ typedef struct {
 	int32_t lMin;
 	int32_t lMax;
 }UIGaugeLoad;
+
+/**
+ * Debug flush struct. Used to send debug string to flush
+ * to UI.
+ *
+ * dStr: String to flush to debug UI
+ * */
+typedef struct {
+	char dStr[UI_DEBUG_FLUSH_STR_LEN];
+}UIDebugFlush;
 
 /**
  * UI accelerometer self test statistics
