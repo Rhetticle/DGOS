@@ -14,11 +14,6 @@
 #define DEVICE_REPORT_MSG_MAX 100
 #define DEVICE_STATISTIC_MSG_MAX 32
 
-typedef enum {
-	UI_SELFTEST_STATE_RUNNING,
-	UI_SELFTEST_STATE_COMPLETE
-}UISelfTestState;
-
 void ui_selftest_make_request(UICmd cmd, void* arg);
 void ui_selftest_init(void);
 

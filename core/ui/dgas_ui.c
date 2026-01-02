@@ -223,7 +223,7 @@ static void ui_event_callback_self_test(lv_event_code_t code, lv_obj_t* focus) {
 		if (focus == objects.self_test_exit_btn) {
 			UIRequest req = {0};
 			req.uSys = UI_SUBSYS_SELFTEST;
-			req.uCmd = UI_CMD_SELFTEST_OBJS_HIDE;
+			req.uCmd = UI_CMD_SELFTEST_RESET;
 
 			ui_make_request(&req);
 			ui_load_screen(&uiMenu);

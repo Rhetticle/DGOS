@@ -166,7 +166,7 @@ void selftest_show_results(AccTestDesc* aDesc, MemTestDesc* dDesc, MemTestDesc* 
 	selftest_populate_acc_results(&rep.sAcc, aDesc);
 	//selftest_populate_mem_results(&rep.sDram, dDesc);
 	//selftest_populate_mem_results(&rep.sFlash, fDesc);
-	ui_selftest_make_request(UI_CMD_SELFTEST_SHOW_REPORT, &rep);
+	ui_selftest_make_request(UI_CMD_SELFTEST_SHOW, &rep);
 }
 
 /**
@@ -180,24 +180,20 @@ DeviceStatus dgas_self_test(void) {
 	AccTestDesc accTest = {0};
 	int32_t progress = 0;
 
-	ui_selftest_make_request(UI_CMD_SELFTEST_OBJS_HIDE, NULL);
-	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_SHOW, NULL);
-	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_UPDATE, &progress);
+	ui_selftest_make_request(UI_CMD_SELFTEST_RUN, NULL);
 	// accelerometer self test
 	dgas_self_test_accelerometer(&accTest);
 	progress = 33;
-	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_UPDATE, &progress);
+	ui_selftest_make_request(UI_CMD_SELFTEST_PROGRESS, &progress);
 	// DRAM self test
 	// dgas_self_test_dram(&dramTest);
 	progress = 67;
-	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_UPDATE, &progress);
+	ui_selftest_make_request(UI_CMD_SELFTEST_PROGRESS, &progress);
 	// External flash self test
 	//dgas_self_test_flash(&flashTest);
 	progress = 100;
-	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_UPDATE, &progress);
+	ui_selftest_make_request(UI_CMD_SELFTEST_PROGRESS, &progress);
 
-	ui_selftest_make_request(UI_CMD_SELFTEST_PROGBAR_HIDE, NULL);
-	ui_selftest_make_request(UI_CMD_SELFTEST_OBJS_SHOW, NULL);
 	selftest_show_results(&accTest, &dramTest, &flashTest);
 	return DEV_OK;
 }
@@ -212,7 +208,6 @@ void dgas_selftest_init(void) {
  * Return: None
  * */
 void task_dgas_self_test(void) {
-	hide_report_objs();
 
 	for (;;) {
 

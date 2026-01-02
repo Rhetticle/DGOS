@@ -178,16 +178,46 @@ static void ui_selftest_display_accelerometer_report(UISelfTestAccStats* aStat) 
 }
 
 /**
+ * Perform UI updates for running self test (Hide "Run" button
+ * and show progress bar)
+ *
+ * Return: None
+ * */
+static void ui_selftest_run(void) {
+	lv_obj_add_flag(objects.self_test_run_btn, LV_OBJ_FLAG_HIDDEN);
+	lv_obj_clear_flag(objects.self_test_progress_bar, LV_OBJ_FLAG_HIDDEN);
+}
+
+/**
+ * Update progress bar of self test UI
+ *
+ * val: Value to set progress bar to
+ *
+ * Return: None
+ * */
+static void ui_selftest_progress(int32_t val) {
+	lv_bar_set_value(objects.self_test_progress_bar, val, LV_ANIM_OFF);
+}
+
+/**
  * Display self test reports onto self test UI
  *
  * rep: Self test report to display
  *
  * Return: None
  * */
-static void ui_selftest_display_report(UISelfTestReport* rep) {
+static void ui_selftest_show(UISelfTestReport* rep) {
+	ui_selftest_show_report_objs();
 	ui_selftest_display_accelerometer_report(&rep->sAcc);
 	//ui_selftest_display_memory_device_report(&rep->sDram, objects.self_test_dram_textarea);
 	//ui_selftest_display_memory_device_report(&rep->sFlash, objects.self_test_flash_textarea);
+}
+
+/**
+ *
+ * */
+static void ui_selftest_reset(void) {
+	ui_selftest_hide_report_objs();
 }
 
 /**
@@ -199,35 +229,23 @@ static void ui_selftest_display_report(UISelfTestReport* rep) {
  * */
 static void ui_selftest_handle_request(UIRequest* req) {
 	switch(req->uCmd) {
-		case UI_CMD_SELFTEST_OBJS_SHOW:
-			ui_selftest_show_report_objs();
+		case UI_CMD_SELFTEST_RUN:
+			ui_selftest_run();
 			break;
-		case UI_CMD_SELFTEST_OBJS_HIDE:
-			ui_selftest_hide_report_objs();
-			break;
-		case UI_CMD_SELFTEST_PROGBAR_UPDATE:{
+		case UI_CMD_SELFTEST_PROGRESS: {
 			int32_t val;
 			memcpy(&val, req->uData, sizeof(int32_t));
-			ui_selftest_update_progress_bar(val);
+			ui_selftest_progress(val);
 			break;
 		}
-		case UI_CMD_SELFTEST_SHOW_REPORT: {
+		case UI_CMD_SELFTEST_SHOW: {
 			UISelfTestReport rep = {0};
-			memcpy(&rep, req->uData, sizeof(UISelfTestReport));
-			ui_selftest_display_report(&rep);
+			memcpy(req->uData, &rep, sizeof(UISelfTestReport));
+			ui_selftest_show(&rep);
 			break;
 		}
-		case UI_CMD_SELFTEST_PROGBAR_HIDE:
-			ui_selftest_progbar_hide();
-			break;
-		case UI_CMD_SELFTEST_PROGBAR_SHOW:
-			ui_selftest_progbar_show();
-			break;
-		case UI_CMD_SELFTEST_RUN_HIDE:
-			ui_selftest_run_btn_hide();
-			break;
-		case UI_CMD_SELFTEST_RUN_SHOW:
-			ui_selftest_run_btn_show();
+		case UI_CMD_SELFTEST_RESET:
+			ui_selftest_reset();
 			break;
 		default:
 			break;
@@ -247,7 +265,7 @@ void ui_selftest_make_request(UICmd cmd, void* arg) {
 	req.uCmd = cmd;
 	req.uSys = UI_SUBSYS_SELFTEST;
 
-	if (cmd == UI_CMD_SELFTEST_SHOW_REPORT) {
+	if (cmd == UI_CMD_SELFTEST_SHOW) {
 		memcpy(req.uData, (UISelfTestReport*) arg, sizeof(UISelfTestReport));
 	}
 	ui_make_request(&req);
