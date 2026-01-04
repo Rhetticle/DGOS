@@ -243,15 +243,21 @@ extern QueueHandle_t queueFlashRead;
 
 #define FLASH_ID_JEDEC_RESPONSE_SIZE 3
 
-#ifndef DGAS_CONFIG_FLASH_CHUNK_SIZE_MAX
-#define FLASH_CHUNK_SIZE_MAX 64
+#ifndef DGAS_CONFIG_FLASH_WRITE_REQ_DATA_MAX
+#define FLASH_WRITE_REQ_DATA_MAX 64
 #else
-#define FLASH_CHUNK_SIZE DGAS_CONFIG_CHUNK_SIZE_MAX
-#endif /* DGAS_CONFIG_FLASH_CHUNK_SIZE */
+#define FLASH_WRITE_REQ_DATA_MAX DGAS_CONFIG_FLASH_WRITE_REQ_DATA_MAX
+#endif /* DGAS_CONFIG_FLASH_WRITE_REQ_DATA_MAX */
+
+#ifndef DGAS_CONFIG_FLASH_READ_REQ_DATA_MAX
+#define FLASH_READ_REQ_DATA_MAX	64
+#else
+#define FLASH_READ_REQ_DATA_MAX	DGAS_CONFIG_FLASH_READ_REQ_DATA_MAX
+#endif /* DGAS_CONFIG_FLASH_READ_REQ_DATA_MAX */
 
 #ifdef FLASH_USE_FREERTOS
-#define FLASH_WRITE_QUEUE_LENGTH 10
-#define FLASH_READ_QUEUE_LENGTH  10
+#define FLASH_WRITE_QUEUE_LENGTH 3
+#define FLASH_READ_QUEUE_LENGTH  3
 
 #define DGAS_TASK_FLASH_PRIORITY (tskIDLE_PRIORITY + 1)
 #define DGAS_TASK_FLASH_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
@@ -287,10 +293,14 @@ typedef struct {
  * cAddr: Address (flash relative) to read from or write to
  * */
 typedef struct{
-	uint8_t cData[FLASH_CHUNK_SIZE_MAX];
 	uint32_t cSize;
 	uint32_t cAddr;
 }FlashChunk;
+
+typedef struct {
+	FlashChunk wChunk;
+	uint8_t wData[FLASH_WRITE_REQ_DATA_MAX];
+}FlashWriteReq;
 
 /**
  * FlashReadReq.
@@ -340,7 +350,7 @@ DeviceStatus flash_block_erase_32k(uint32_t block);
 DeviceStatus flash_block_erase_64k(uint32_t block);
 DeviceStatus flash_self_test(uint32_t pCount);
 DeviceStatus flash_self_test_entire(void);
-DeviceStatus flash_write_chunk(FlashChunk* chunk);
+DeviceStatus flash_write_chunk(FlashChunk* chunk, uint8_t* data);
 DeviceStatus flash_read_chunk(FlashChunk* dest);
 
 #ifdef FLASH_USE_FREERTOS

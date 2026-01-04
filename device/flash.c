@@ -829,10 +829,10 @@ DeviceStatus flash_self_test_entire(void) {
  *
  * Return: Status indicating success or failure
  * */
-DeviceStatus flash_write_chunk(FlashChunk* chunk) {
+DeviceStatus flash_write_chunk(FlashChunk* chunk, uint8_t* data) {
 	DeviceStatus stat;
 
-	if ((stat = flash_write_mem(chunk->cData, chunk->cSize, chunk->cAddr) != DEV_OK)) {
+	if ((stat = flash_write_mem(data, chunk->cSize, chunk->cAddr) != DEV_OK)) {
 		return stat;
 	}
 	return DEV_OK;
@@ -845,10 +845,10 @@ DeviceStatus flash_write_chunk(FlashChunk* chunk) {
  *
  * Return: Status indicating success or failure
  * */
-DeviceStatus flash_read_chunk(FlashChunk* dest) {
+DeviceStatus flash_read_chunk(FlashChunk* read, uint8_t* dest) {
 	DeviceStatus stat;
 
-	if ((stat = flash_read_mem(dest->cData, dest->cSize, dest->cAddr)) != DEV_OK) {
+	if ((stat = flash_read_mem(dest, read->cSize, read->cAddr)) != DEV_OK) {
 		return stat;
 	}
 	return DEV_OK;
@@ -861,25 +861,28 @@ DeviceStatus flash_read_chunk(FlashChunk* dest) {
  * Return: None
  * */
 static void task_flash(void) {
-	FlashChunk wChunk = {0};
+	FlashWriteReq wReq = {0};
 	FlashReadReq rReq = {0};
+	// buffer for data for read requests
+	uint8_t rData[FLASH_READ_REQ_DATA_MAX];
+
 	flash_init_hardware();
 	queueFlashWrite = xQueueCreate(FLASH_WRITE_QUEUE_LENGTH,
-									sizeof(FlashChunk));
+									sizeof(FlashWriteReq));
 	queueFlashRead = xQueueCreate(FLASH_READ_QUEUE_LENGTH,
 									sizeof(FlashReadReq));
 	for(;;) {
-		if (xQueueReceive(queueFlashWrite, &wChunk, 0) == pdTRUE) {
-			if (flash_write_chunk(&wChunk) != DEV_OK) {
+		if (xQueueReceive(queueFlashWrite, &wReq, 0) == pdTRUE) {
+			if (flash_write_chunk(&wReq.wChunk, wReq.wData) != DEV_OK) {
 				// let dgas_sys know
 			}
 		}
-		if (xQueueReceive(queueFlashRead, &rChunk, 0) == pdTRUE) {
-			if (flash_read_chunk(&rReq.rChunk) != DEV_OK) {
+		if (xQueueReceive(queueFlashRead, &rReq, 0) == pdTRUE) {
+			if (flash_read_chunk(&rReq.rChunk, rData) != DEV_OK) {
 				// let dgas_sys know
 			} else {
 				// read successfull so send to destination queue
-				xQueueSend(rReq->rDest, &rReq.rChunk, 0);
+				xQueueSend(rReq.rDest, rData, 0);
 			}
 		}
 	}
