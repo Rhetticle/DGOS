@@ -26,20 +26,6 @@ extern QueueHandle_t queueFlashWrite;
 extern QueueHandle_t queueFlashRead;
 #endif /* FLASH_USE_FREERTOS */
 
-typedef struct{
-	uint8_t data[64];
-	uint32_t id;
-}FlashChunk;
-
-typedef struct {
-	uint8_t opCode;
-	uint32_t addr;
-	uint8_t* args;
-	uint32_t argCount;
-	uint32_t expect;
-	uint32_t dummy;
-}FlashInstruction;
-
 // Memory size constants
 #define FLASH_ARRAY_SIZE			0x2000000 	// 32MiB (256MBit)
 #define FLASH_SECTOR_SIZE			0x1000		// 4KiB
@@ -257,10 +243,10 @@ typedef struct {
 
 #define FLASH_ID_JEDEC_RESPONSE_SIZE 3
 
-#ifndef DGAS_CONFIG_FLASH_CHUNK_SIZE
-#define FLASH_CHUNK_SIZE 64
+#ifndef DGAS_CONFIG_FLASH_CHUNK_SIZE_MAX
+#define FLASH_CHUNK_SIZE_MAX 64
 #else
-#define FLASH_CHUNK_SIZE DGAS_CONFIG_CHUNK_SIZE
+#define FLASH_CHUNK_SIZE DGAS_CONFIG_CHUNK_SIZE_MAX
 #endif /* DGAS_CONFIG_FLASH_CHUNK_SIZE */
 
 #ifdef FLASH_USE_FREERTOS
@@ -271,7 +257,55 @@ typedef struct {
 #define DGAS_TASK_FLASH_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
 #endif /* FLASH_USE_FREERTOS */
 
+/**
+ * FlashInstruction.
+ *
+ * Used to send QSPI instructions to flash IC.
+ *
+ * opCode: Instruction opCode
+ * addr: Register address
+ * args: Optional arguments for instruction
+ * argCount: Number of optional arguments
+ * expect: Number of bytes we expect to receive from IC after instruction
+ * 		   is issued (if any)
+ * dummy: Number of dummy bytes to send at end of instruction
+ * */
+typedef struct {
+	uint8_t opCode;
+	uint32_t addr;
+	uint8_t* args;
+	uint32_t argCount;
+	uint32_t expect;
+	uint32_t dummy;
+}FlashInstruction;
 
+/**
+ * FlashChunk.
+ *
+ * cData: Data to write to flash or buffer to read into
+ * cSize: Number of bytes to read or write
+ * cAddr: Address (flash relative) to read from or write to
+ * */
+typedef struct{
+	uint8_t cData[FLASH_CHUNK_SIZE_MAX];
+	uint32_t cSize;
+	uint32_t cAddr;
+}FlashChunk;
+
+/**
+ * FlashReadReq.
+ *
+ * Flash read request struct, interface used to request flash controller task
+ * to read data from flash IC. Other tasks must provide a destination queue for
+ * the flash controller task to send the read chunk to.
+ *
+ * rChunk: Flash chunk to read
+ * rDest: Destination queue to send read chunk to
+ * */
+typedef struct {
+	FlashChunk rChunk;
+	QueueHandle_t rDest;
+}FlashReadReq;
 
 /****************** Function Prototypes ************************/
 

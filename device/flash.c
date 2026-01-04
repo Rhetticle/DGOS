@@ -830,6 +830,11 @@ DeviceStatus flash_self_test_entire(void) {
  * Return: Status indicating success or failure
  * */
 DeviceStatus flash_write_chunk(FlashChunk* chunk) {
+	DeviceStatus stat;
+
+	if ((stat = flash_write_mem(chunk->cData, chunk->cSize, chunk->cAddr) != DEV_OK)) {
+		return stat;
+	}
 	return DEV_OK;
 }
 
@@ -841,6 +846,11 @@ DeviceStatus flash_write_chunk(FlashChunk* chunk) {
  * Return: Status indicating success or failure
  * */
 DeviceStatus flash_read_chunk(FlashChunk* dest) {
+	DeviceStatus stat;
+
+	if ((stat = flash_read_mem(dest->cData, dest->cSize, dest->cAddr)) != DEV_OK) {
+		return stat;
+	}
 	return DEV_OK;
 }
 
@@ -851,14 +861,27 @@ DeviceStatus flash_read_chunk(FlashChunk* dest) {
  * Return: None
  * */
 static void task_flash(void) {
+	FlashChunk wChunk = {0};
+	FlashReadReq rReq = {0};
 	flash_init_hardware();
-
 	queueFlashWrite = xQueueCreate(FLASH_WRITE_QUEUE_LENGTH,
 									sizeof(FlashChunk));
 	queueFlashRead = xQueueCreate(FLASH_READ_QUEUE_LENGTH,
-									sizeof(FlashChunk));
+									sizeof(FlashReadReq));
 	for(;;) {
-
+		if (xQueueReceive(queueFlashWrite, &wChunk, 0) == pdTRUE) {
+			if (flash_write_chunk(&wChunk) != DEV_OK) {
+				// let dgas_sys know
+			}
+		}
+		if (xQueueReceive(queueFlashRead, &rChunk, 0) == pdTRUE) {
+			if (flash_read_chunk(&rReq.rChunk) != DEV_OK) {
+				// let dgas_sys know
+			} else {
+				// read successfull so send to destination queue
+				xQueueSend(rReq->rDest, &rReq.rChunk, 0);
+			}
+		}
 	}
 }
 

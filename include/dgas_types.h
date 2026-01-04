@@ -24,4 +24,9 @@
 
 #define DGAS_ATTR_FLASH			__attribute__((section(".extFlash")))
 
+typedef enum {
+	DGAS_STATUS_OK,
+	DGAS_STATUS_ERROR
+}DStatus;
+
 #endif /* DGOS_INCLUDE_DGAS_TYPES_H_ */
