@@ -297,6 +297,14 @@ typedef struct{
 	uint32_t cAddr;
 }FlashChunk;
 
+/**
+ * FlashWriteReq.
+ *
+ * Interface for other tasks to make a write request to flash controller task.
+ *
+ * wChunk: Flash chunk to write to
+ * wData: Data to write to flash chunk
+ * */
 typedef struct {
 	FlashChunk wChunk;
 	uint8_t wData[FLASH_WRITE_REQ_DATA_MAX];

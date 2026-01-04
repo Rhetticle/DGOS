@@ -832,6 +832,9 @@ DeviceStatus flash_self_test_entire(void) {
 DeviceStatus flash_write_chunk(FlashChunk* chunk, uint8_t* data) {
 	DeviceStatus stat;
 
+	if (chunk->cSize > FLASH_WRITE_REQ_DATA_MAX) {
+		return DEV_ERROR;
+	}
 	if ((stat = flash_write_mem(data, chunk->cSize, chunk->cAddr) != DEV_OK)) {
 		return stat;
 	}
@@ -848,6 +851,9 @@ DeviceStatus flash_write_chunk(FlashChunk* chunk, uint8_t* data) {
 DeviceStatus flash_read_chunk(FlashChunk* read, uint8_t* dest) {
 	DeviceStatus stat;
 
+	if (read->cSize > FLASH_READ_REQ_DATA_MAX) {
+		return DEV_ERROR;
+	}
 	if ((stat = flash_read_mem(dest, read->cSize, read->cAddr)) != DEV_OK) {
 		return stat;
 	}
