@@ -242,6 +242,12 @@ static void ui_event_callback_self_test(lv_event_code_t code, lv_obj_t* focus) {
 static void ui_event_callback_settings(lv_event_code_t code, lv_obj_t* focus) {
 	if (code == LV_EVENT_CLICKED) {
 		if (focus == objects.settings_exit_btn) {
+			UISettingsState state = {0};
+			uint32_t params[sizeof(UISettingsState)];
+			state.sParam = lv_dropdown_get_selected(objects.settings_param_dropdown);
+			state.sBus = lv_dropdown_get_selected(objects.settings_bus_dropdown);
+			memcpy(params, &state, sizeof(UISettingsState));
+			ui_dispatch_event(UI_UID_SETTINGS, UI_EVENT_SETTINGS_SAVE, params, sizeof(UISettingsState));
 			ui_load_screen(&uiMenu);
 		}
 	}

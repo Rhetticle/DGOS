@@ -13,10 +13,9 @@
 #ifdef FLASH_USE_FREERTOS
 // stores task handle for flash memory controller
 static TaskHandle_t taskHandleFlash;
-// Queue for sending data to be written to flash
-QueueHandle_t queueFlashWrite;
-// Queue for sending data read from flash
-QueueHandle_t queueFlashRead;
+// Queue for flash requests
+QueueHandle_t queueFlashReq;
+
 #endif /* FLASH_USE_FREERTOS */
 // QSPI handle
 static QSPI_HandleTypeDef qspiFlash;
@@ -822,73 +821,51 @@ DeviceStatus flash_self_test_entire(void) {
 	return flash_self_test(FLASH_PAGE_COUNT);
 }
 
-/**
- * Write a 64 byte chunk to flash memory
- *
- * chunk: Chunk to write
- *
- * Return: Status indicating success or failure
- * */
-DeviceStatus flash_write_chunk(FlashChunk* chunk, uint8_t* data) {
-	DeviceStatus stat;
-
-	if (chunk->cSize > FLASH_WRITE_REQ_DATA_MAX) {
-		return DEV_ERROR;
-	}
-	if ((stat = flash_write_mem(data, chunk->cSize, chunk->cAddr) != DEV_OK)) {
-		return stat;
-	}
-	return DEV_OK;
-}
-
-/**
- * Read a 64 byte chunk from flash memory
- *
- * dest: Destination struct to store data
- *
- * Return: Status indicating success or failure
- * */
-DeviceStatus flash_read_chunk(FlashChunk* read, uint8_t* dest) {
-	DeviceStatus stat;
-
-	if (read->cSize > FLASH_READ_REQ_DATA_MAX) {
-		return DEV_ERROR;
-	}
-	if ((stat = flash_read_mem(dest, read->cSize, read->cAddr)) != DEV_OK) {
-		return stat;
-	}
-	return DEV_OK;
-}
-
 #ifdef FLASH_USE_FREERTOS
+
+/**
+ * Handle a flash command request.
+ *
+ * req: Pointer to request to handle
+ *
+ * Return: Device status indicating success or failure
+ * */
+static DeviceStatus flash_handle_request(FlashReq* req) {
+	DeviceStatus stat;
+
+	switch(req->rCmd) {
+		case FLASH_CMD_WRITE:
+			stat = flash_write_mem(req->rBuf, req->rSize, req->rAddr);
+			break;
+		case FLASH_CMD_READ:
+			stat = flash_read_mem(req->rBuf, req->rSize, req->rAddr);
+			break;
+		case FLASH_CMD_ERASE:
+			stat = flash_chip_erase();
+			break;
+		default:
+			stat = DEV_ERROR;
+			break;
+	}
+	xTaskNotify(req->rCaller, stat, 0);
+	return stat;
+}
+
 /**
  * Thread function for flash controller task
  *
  * Return: None
  * */
 static void task_flash(void) {
-	FlashWriteReq wReq = {0};
-	FlashReadReq rReq = {0};
-	// buffer for data for read requests
-	uint8_t rData[FLASH_READ_REQ_DATA_MAX];
+	FlashReq req = {0};
 
 	flash_init_hardware();
-	queueFlashWrite = xQueueCreate(FLASH_WRITE_QUEUE_LENGTH,
-									sizeof(FlashWriteReq));
-	queueFlashRead = xQueueCreate(FLASH_READ_QUEUE_LENGTH,
-									sizeof(FlashReadReq));
+	queueFlashReq = xQueueCreate(FLASH_QUEUE_REQ_SIZE, sizeof(FlashReq));
+
 	for(;;) {
-		if (xQueueReceive(queueFlashWrite, &wReq, 0) == pdTRUE) {
-			if (flash_write_chunk(&wReq.wChunk, wReq.wData) != DEV_OK) {
+		if (xQueueReceive(queueFlashReq, &req, 0) == pdTRUE) {
+			if (flash_handle_request(&req) != DEV_OK) {
 				// let dgas_sys know
-			}
-		}
-		if (xQueueReceive(queueFlashRead, &rReq, 0) == pdTRUE) {
-			if (flash_read_chunk(&rReq.rChunk, rData) != DEV_OK) {
-				// let dgas_sys know
-			} else {
-				// read successfull so send to destination queue
-				xQueueSend(rReq.rDest, rData, 0);
 			}
 		}
 	}

@@ -22,8 +22,7 @@
 #endif /* FLASH_USE_FREERTOS */
 
 #ifdef FLASH_USE_FREERTOS
-extern QueueHandle_t queueFlashWrite;
-extern QueueHandle_t queueFlashRead;
+extern QueueHandle_t queueFlashReq;
 #endif /* FLASH_USE_FREERTOS */
 
 // Memory size constants
@@ -256,8 +255,7 @@ extern QueueHandle_t queueFlashRead;
 #endif /* DGAS_CONFIG_FLASH_READ_REQ_DATA_MAX */
 
 #ifdef FLASH_USE_FREERTOS
-#define FLASH_WRITE_QUEUE_LENGTH 3
-#define FLASH_READ_QUEUE_LENGTH  3
+#define FLASH_QUEUE_REQ_SIZE	5
 
 #define DGAS_TASK_FLASH_PRIORITY (tskIDLE_PRIORITY + 1)
 #define DGAS_TASK_FLASH_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
@@ -285,45 +283,38 @@ typedef struct {
 	uint32_t dummy;
 }FlashInstruction;
 
+#ifdef FLASH_USE_FREERTOS
 /**
- * FlashChunk.
+ * FlashCMD.
  *
- * cData: Data to write to flash or buffer to read into
- * cSize: Number of bytes to read or write
- * cAddr: Address (flash relative) to read from or write to
+ * Different types of flash commands to be used when making
+ * a flash request.
  * */
-typedef struct{
-	uint32_t cSize;
-	uint32_t cAddr;
-}FlashChunk;
+typedef enum {
+	FLASH_CMD_WRITE,
+	FLASH_CMD_READ,
+	FLASH_CMD_ERASE
+}FlashCMD;
 
 /**
- * FlashWriteReq.
+ * FlashReq.
  *
- * Interface for other tasks to make a write request to flash controller task.
+ * Flash request struct. Interface used by other tasks to read
+ * and write to flash IC.
  *
- * wChunk: Flash chunk to write to
- * wData: Data to write to flash chunk
+ * rCmd: Flash command to execute
+ * rAddr: Flash address to read/write to (if applicable)
+ * rBuf: Buffer containing data to write or to store read data (if applicable)
+ * rSize: Number of bytes to read or write (if applicable)
  * */
 typedef struct {
-	FlashChunk wChunk;
-	uint8_t wData[FLASH_WRITE_REQ_DATA_MAX];
-}FlashWriteReq;
-
-/**
- * FlashReadReq.
- *
- * Flash read request struct, interface used to request flash controller task
- * to read data from flash IC. Other tasks must provide a destination queue for
- * the flash controller task to send the read chunk to.
- *
- * rChunk: Flash chunk to read
- * rDest: Destination queue to send read chunk to
- * */
-typedef struct {
-	FlashChunk rChunk;
-	QueueHandle_t rDest;
-}FlashReadReq;
+	FlashCMD rCmd;
+	uint32_t rAddr;
+	uint8_t* rBuf;
+	uint32_t rSize;
+	TaskHandle_t rCaller;
+}FlashReq;
+#endif /* FLASH_USE_FREERTOS */
 
 /****************** Function Prototypes ************************/
 
@@ -358,8 +349,6 @@ DeviceStatus flash_block_erase_32k(uint32_t block);
 DeviceStatus flash_block_erase_64k(uint32_t block);
 DeviceStatus flash_self_test(uint32_t pCount);
 DeviceStatus flash_self_test_entire(void);
-DeviceStatus flash_write_chunk(FlashChunk* chunk, uint8_t* data);
-DeviceStatus flash_read_chunk(FlashChunk* dest);
 
 #ifdef FLASH_USE_FREERTOS
 void task_init_flash(void);

@@ -12,6 +12,7 @@
 #include <dgas_gauge.h>
 #include <dgas_debug.h>
 #include <dgas_selftest.h>
+#include <dgas_settings.h>
 #include <dgas_param.h>
 #include <accelerometer.h>
 #include <dgas_adc.h>
@@ -66,6 +67,15 @@ void debug_event_handler(UIEventCode eCode) {
 	}
 }
 
+void settings_event_handler(UIEventCode eCode, UISettingsState* state) {
+	if (eCode == UI_EVENT_SETTINGS_SAVE) {
+		GaugeConfig conf = {0};
+		conf.bid = (BusID) state->sBus;
+		conf.gid = (GaugeParamID) state->sParam;
+		dgas_settings_config_save(&conf);
+	}
+}
+
 /**
  * Handle UI event
  *
@@ -86,8 +96,12 @@ void handle_ui_event(UIEvent* evt) {
 	case UI_UID_SELFTEST:
 		dgas_self_test();
 		break;
-	case UI_UID_SETTINGS:
+	case UI_UID_SETTINGS: {
+		UISettingsState state = {0};
+		memcpy(&state, evt->eParams, sizeof(UISettingsState));
+		settings_event_handler(evt->eCode, &state);
 		break;
+	}
 	default:
 		break;
 	}

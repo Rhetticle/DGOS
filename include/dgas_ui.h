@@ -81,8 +81,7 @@ typedef enum {
 
 	UI_EVENT_SELFTEST_RUN,
 
-	UI_EVENT_SETTINGS_BUS,
-	UI_EVENT_SETTINGS_PARAM
+	UI_EVENT_SETTINGS_SAVE
 }UIEventCode;
 
 /**
@@ -213,6 +212,17 @@ typedef struct {
 	UISelfTestMemStats sFlash;
 	UISelfTestMemStats sDram;
 }UISelfTestReport;
+
+/**
+ * UISettingsState struct.
+ *
+ * sParam: Parameter selection number on dropdown (0 to 7)
+ * sBus: Bus selection number on dropdown (0 to 2)
+ * */
+typedef struct {
+	uint32_t sParam;
+	uint32_t sBus;
+}UISettingsState;
 
 /**
  * UI request struct. Used to request a change to UI
