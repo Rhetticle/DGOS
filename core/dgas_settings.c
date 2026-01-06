@@ -25,6 +25,7 @@ DStatus dgas_settings_config_save(GaugeConfig* conf) {
 	req.rCmd = FLASH_CMD_WRITE;
 	req.rAddr = DGAS_SETTINGS_FLASH_CONFIG_ADDR;
 	req.rSize = sizeof(GaugeConfig);
+	req.rCaller = xTaskGetCurrentTaskHandle();
 
 	memcpy(buf, conf, sizeof(GaugeConfig));
 	req.rBuf = buf;
@@ -54,6 +55,7 @@ DStatus dgas_settings_config_read(GaugeConfig* dest) {
 	req.rAddr = DGAS_SETTINGS_FLASH_CONFIG_ADDR;
 	req.rSize = sizeof(GaugeConfig);
 	req.rCmd = FLASH_CMD_READ;
+	req.rCaller = xTaskGetCurrentTaskHandle();
 
 	xQueueSend(queueFlashReq, &req, portMAX_DELAY);
 	stat = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);

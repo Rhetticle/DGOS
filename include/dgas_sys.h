@@ -10,6 +10,7 @@
 
 #include <dgas_types.h>
 
+
 #define TASK_DGAS_SYS_PRIORITY (tskIDLE_PRIORITY + 6)
 #define TASK_DGAS_SYS_STACK_SIZE (configMINIMAL_STACK_SIZE * 6)
 
