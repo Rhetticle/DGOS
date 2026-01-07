@@ -13,9 +13,14 @@
 #ifdef FLASH_USE_FREERTOS
 // stores task handle for flash memory controller
 static TaskHandle_t taskHandleFlash;
+// buffers for data for other tasks to use when making requests
+static FlashBuf flashBuffers[FLASH_REQ_BUFFER_COUNT];
+// Counting semaphore to keep track of used buffers
+static SemaphoreHandle_t semaphoreFlashBuf;
+// Queue for cycling buffer pointers
+static QueueHandle_t queueFlashBuf;
 // Queue for flash requests
 QueueHandle_t queueFlashReq;
-
 #endif /* FLASH_USE_FREERTOS */
 // QSPI handle
 static QSPI_HandleTypeDef qspiFlash;
@@ -835,10 +840,10 @@ static DeviceStatus flash_handle_request(FlashReq* req) {
 
 	switch(req->rCmd) {
 		case FLASH_CMD_WRITE:
-			stat = flash_write_mem(req->rBuf, req->rSize, req->rAddr);
+			stat = flash_write_mem((uint8_t*) req->rBuf, req->rSize, req->rAddr);
 			break;
 		case FLASH_CMD_READ:
-			stat = flash_read_mem(req->rBuf, req->rSize, req->rAddr);
+			stat = flash_read_mem((uint8_t*) req->rBuf, req->rSize, req->rAddr);
 			break;
 		case FLASH_CMD_ERASE:
 			stat = flash_chip_erase();
@@ -852,6 +857,46 @@ static DeviceStatus flash_handle_request(FlashReq* req) {
 }
 
 /**
+ * Initialise flash buffers.
+ *
+ * Return: None
+ * */
+static void flash_buffer_init(void) {
+	for (int i = 0; i < FLASH_REQ_BUFFER_COUNT; i++) {
+		// put all buffer addresses onto queue
+		xQueueSend(queueFlashBuf, &flashBuffers[i], 0);
+	}
+}
+
+/**
+ * Allocate buffer for data.
+ *
+ * timeout: Time to wait for allocation
+ *
+ * Return: Pointer to free buffer
+ * */
+FlashBuf* flash_alloc_buffer(uint32_t timeout) {
+	FlashBuf* buf;
+	if (xSemaphoreTake(semaphoreFlashBuf, timeout) != pdTRUE) {
+		return NULL;
+	}
+	xQueueReceive(queueFlashBuf, &buf, 0);
+	return buf;
+}
+
+/**
+ * Free flash buffer for others to use
+ *
+ * ptr: Pointer to buffer to free
+ *
+ * Return: None
+ * */
+void flash_free_buffer(FlashBuf* ptr) {
+	xSemaphoreGive(semaphoreFlashBuf);
+	xQueueSend(queueFlashBuf, &ptr, 0);
+}
+
+/**
  * Thread function for flash controller task
  *
  * Return: None
@@ -861,6 +906,9 @@ static void task_flash(void) {
 
 	flash_init_hardware();
 	queueFlashReq = xQueueCreate(FLASH_QUEUE_REQ_SIZE, sizeof(FlashReq));
+	queueFlashBuf = xQueueCreate(FLASH_REQ_BUFFER_COUNT, sizeof(FlashBuf*));
+	semaphoreFlashBuf = xSemaphoreCreateCounting(FLASH_REQ_BUFFER_COUNT, FLASH_REQ_BUFFER_COUNT);
+	flash_buffer_init();
 
 	for(;;) {
 		if (xQueueReceive(queueFlashReq, &req, 0) == pdTRUE) {

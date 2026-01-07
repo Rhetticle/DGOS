@@ -6,6 +6,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <flash.h>
 #include <device.h>
 #include <dgas_settings.h>
@@ -19,7 +20,7 @@
  * */
 DStatus dgas_settings_config_save(GaugeConfig* conf) {
 	FlashReq req = {0};
-	uint8_t buf[sizeof(GaugeConfig)];
+	FlashBuf* buf = flash_alloc_buffer(FLASH_ALLOC_TIMEOUT_10);
 	DeviceStatus stat;
 
 	req.rCmd = FLASH_CMD_WRITE;
@@ -48,7 +49,7 @@ DStatus dgas_settings_config_save(GaugeConfig* conf) {
  * */
 DStatus dgas_settings_config_read(GaugeConfig* dest) {
 	FlashReq req = {0};
-	uint8_t buf[sizeof(GaugeConfig)];
+	FlashBuf* buf = flash_alloc_buffer(FLASH_ALLOC_TIMEOUT_10);
 	DeviceStatus stat;
 
 	req.rBuf = buf;

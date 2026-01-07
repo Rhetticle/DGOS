@@ -19,6 +19,7 @@
 #ifdef FLASH_USE_FREERTOS
 #include <FreeRTOS.h>
 #include <queue.h>
+#include <semphr.h>
 #endif /* FLASH_USE_FREERTOS */
 
 #ifdef FLASH_USE_FREERTOS
@@ -257,6 +258,17 @@ extern QueueHandle_t queueFlashReq;
 #ifdef FLASH_USE_FREERTOS
 #define FLASH_QUEUE_REQ_SIZE	5
 
+#define FLASH_REQ_BUFFER_SIZE	256
+#define FLASH_REQ_BUFFER_COUNT	10
+
+#define FLASH_ALLOC_TIMEOUT_10		10
+#define FLASH_ALLOC_TIMEOUT_50		50
+#define FLASH_ALLOC_TIMEOUT_100		100
+#define FLASH_ALLOC_TIMEOUT_200		200
+#define FLASH_ALLOC_TIMEOUT_500		500
+#define FLASH_ALLOC_TIMEOUT_1000	1000
+#define FLASH_ALLOC_TIMEOUT_MAX		portMAX_DELAY
+
 #define DGAS_TASK_FLASH_PRIORITY (tskIDLE_PRIORITY + 1)
 #define DGAS_TASK_FLASH_STACK_SIZE (configMINIMAL_STACK_SIZE * 2)
 #endif /* FLASH_USE_FREERTOS */
@@ -284,6 +296,9 @@ typedef struct {
 }FlashInstruction;
 
 #ifdef FLASH_USE_FREERTOS
+
+typedef uint8_t FlashBuf[FLASH_REQ_BUFFER_SIZE];
+
 /**
  * FlashCMD.
  *
@@ -310,7 +325,7 @@ typedef enum {
 typedef struct {
 	FlashCMD rCmd;
 	uint32_t rAddr;
-	uint8_t* rBuf;
+	FlashBuf* rBuf;
 	uint32_t rSize;
 	TaskHandle_t rCaller;
 }FlashReq;
@@ -351,6 +366,8 @@ DeviceStatus flash_self_test(uint32_t pCount);
 DeviceStatus flash_self_test_entire(void);
 
 #ifdef FLASH_USE_FREERTOS
+FlashBuf* flash_alloc_buffer(uint32_t timeout);
+void flash_free_buffer(FlashBuf* ptr);
 void task_init_flash(void);
 TaskHandle_t task_flash_get_handle(void);
 #endif /* FLASH_USE_FREERTOS */
