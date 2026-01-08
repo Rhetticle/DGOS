@@ -33,6 +33,7 @@ DStatus dgas_settings_config_save(GaugeConfig* conf) {
 
 	xQueueSend(queueFlashReq, &req, portMAX_DELAY);
 	stat = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+	flash_free_buffer(buf);
 
 	if (stat != DEV_OK) {
 		return DGAS_STATUS_ERROR;
@@ -62,9 +63,11 @@ DStatus dgas_settings_config_read(GaugeConfig* dest) {
 	stat = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
 	if (stat != DEV_OK) {
+		flash_free_buffer(buf);
 		return DGAS_STATUS_ERROR;
 	}
 	memcpy(dest, buf, sizeof(GaugeConfig));
+	flash_free_buffer(buf);
 	return DGAS_STATUS_OK;
 }
 
