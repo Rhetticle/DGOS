@@ -126,6 +126,7 @@ static void ui_event_callback_menu(lv_event_code_t code, lv_obj_t* focus) {
 		} else if (focus == objects.obd2_debug_btn) {
 			ui_load_screen(&uiDebug);
 		} else if (focus == objects.diagnose_btn) {
+			ui_dispatch_event(UI_UID_DTC, UI_EVENT_DTC_GET, NULL, 0);
 			ui_load_screen(&uiDTC);
 		} else if (focus == objects.self_test_btn) {
 			ui_load_screen(&uiSelfTest);

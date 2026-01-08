@@ -170,6 +170,17 @@ typedef struct {
 }UIDebugFlush;
 
 /**
+ * DTC report struct. Used to send DTC codes to UI.
+ *
+ * rStr: Array of DTC strings
+ * rCount: Number of DTC strings
+ * */
+typedef struct {
+	char rStr[UI_DTC_MAX_DTC][UI_DTC_STR_LEN];
+	uint32_t rCount;
+}UIDTCReport;
+
+/**
  * UI accelerometer self test statistics
  *
  * aX: Acceleration in x axis (g's)

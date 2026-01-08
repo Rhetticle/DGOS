@@ -67,6 +67,29 @@ void debug_event_handler(UIEventCode eCode) {
 	}
 }
 
+/**
+ * Event handler for DTC
+ *
+ * eCode: Event code
+ *
+ * Return: None
+ * */
+void dtc_event_handler(UIEventCode eCode) {
+	if (eCode == UI_EVENT_DTC_GET) {
+
+	} else if (eCode == UI_EVENT_DTC_CLEAR) {
+
+	}
+}
+
+/**
+ * Event handler for settings
+ *
+ * eCode: Event code
+ * state: State of settings UI (selected options)
+ *
+ * Return: None
+ * */
 void settings_event_handler(UIEventCode eCode, UISettingsState* state) {
 	if (eCode == UI_EVENT_SETTINGS_SAVE) {
 		GaugeConfig conf = {0};
@@ -92,6 +115,7 @@ void handle_ui_event(UIEvent* evt) {
 		debug_event_handler(evt->eCode);
 		break;
 	case UI_UID_DTC:
+		dtc_event_handler(evt->eCode);
 		break;
 	case UI_UID_SELFTEST:
 		dgas_self_test();
