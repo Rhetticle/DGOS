@@ -7,6 +7,20 @@
 
 #include <ui_dtc.h>
 #include <dgas_ui.h>
+#include <string.h>
+#include <stdio.h>
+
+/**
+ * Build full and coloured DTC string to display to UI textarea.
+ *
+ * dStr: Bare DTC string
+ * dest: Destination buffer
+ *
+ * Return: None
+ * */
+static void ui_dtc_build_report_string(char* dStr, char* dest) {
+	sprintf(dest, "#FF0000 CODE FOUND - #FFFF00 %s#\n", dStr);
+}
 
 /**
  * Display DTC report onto DTC UI.
@@ -15,8 +29,17 @@
  *
  * Return: None
  * */
-static ui_dtc_show_report(UIDTCReport* rep) {
+static void ui_dtc_show_report(UIDTCReport* rep) {
+	char buff[UI_DTC_REPORTED_STR_LEN_MAX];
 
+	if (rep->rCount == 0) {
+		lv_textarea_set_text(objects.diagnose_textarea, "#00FF00 NO DTCs FOUND#");
+		return;
+	}
+	for (int i = 0; i < rep->rCount; i++) {
+		ui_dtc_build_report_string(rep->rStr[i], buff);
+		lv_textarea_add_text(objects.diagnose_textarea, buff);
+	}
 }
 
 /**
@@ -36,7 +59,6 @@ static void ui_dtc_handle_request(UIRequest* req) {
 		}
 		default:
 			break;
-
 	}
 }
 

@@ -11,7 +11,9 @@
 #include <dgas_types.h>
 #include <dgas_ui.h>
 
-void ui_dtc_make_request(void);
+#define UI_DTC_REPORTED_STR_LEN_MAX	64
+
+void ui_dtc_make_request(UICmd cmd, void* arg);
 void ui_dtc_init(void);
 
 #endif /* DGOS_INCLUDE_UI_DTC_H_ */

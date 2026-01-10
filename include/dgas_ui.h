@@ -34,6 +34,9 @@
 
 #define UI_DEBUG_FLUSH_STR_LEN		256
 
+#define UI_DTC_MAX_DTC	10
+#define UI_DTC_STR_LEN	6
+
 #define UI_SUBSYS_COUNT		10
 
 extern QueueHandle_t queueUIEvent;

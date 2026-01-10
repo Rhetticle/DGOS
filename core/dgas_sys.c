@@ -187,10 +187,10 @@ uint32_t dgas_sys_boot(void) {
 	if (dgas_sys_wait_on_object((void**)&queueUIEvent, DGAS_SYS_BOOT_TIMEOUT_UI) != 0) {
 		return DGAS_SYS_BOOT_ERROR_UI;
 	}
-	//task_dgas_obd_init();
-	//if (dgas_sys_wait_on_object((void**)&queueOBDRequest, DGAS_SYS_BOOT_TIMEOUT_OBD) != 0) {
-	//	return DGAS_SYS_BOOT_ERROR_OBD;
-	//}
+	task_dgas_obd_init();
+	if (dgas_sys_wait_on_object((void**)&queueOBDRequest, DGAS_SYS_BOOT_TIMEOUT_OBD) != 0) {
+		return DGAS_SYS_BOOT_ERROR_OBD;
+	}
 	task_dgas_gauge_init();
 	//if (dgas_sys_wait_on_object((void**)&queueGaugeUpdate, DGAS_SYS_BOOT_TIMEOUT_UI) != 0) {
 	//	return DGAS_SYS_BOOT_ERROR_UI;
@@ -199,7 +199,7 @@ uint32_t dgas_sys_boot(void) {
 	//if (dgas_sys_wait_on_object((void**)&queueDebug, DGAS_SYS_BOOT_TIMEOUT_UI) != 0) {
 	//	return DGAS_SYS_BOOT_ERROR_UI;
 	//}
-	dgas_selftest_init();
+	//dgas_selftest_init();
 	return DGAS_SYS_BOOT_OK;
 }
 

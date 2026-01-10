@@ -110,14 +110,14 @@ static void kwp_bus_uart_init(void) {
  * Return: None
  * */
 void UART4_IRQHandler(void) {
-	if (KWP_UART_INSTANCE->ISR & USART_ISR_RXNE) {
+	//if (KWP_UART_INSTANCE->ISR & USART_ISR_RXNE) {
 		if (rxByteCount == sizeof(rxBuff)) {
 			return;
 		}
 		rxBuff[rxByteCount] = KWP_UART_INSTANCE->RDR;
 		KWP_UART_INSTANCE->ISR &= ~USART_ISR_RXNE;
 		rxByteCount++;
-	}
+	//}
 }
 
 /**
@@ -215,7 +215,6 @@ BusStatus kwp_bus_read_byte(uint8_t* dest, uint32_t timeout) {
 		if (HAL_GetTick() > tickStart + timeout) {
 			return BUS_RX_ERROR;
 		}
-		vTaskDelay(1);
 	}
 	*dest = rxBuff[--rxByteCount];
 	return BUS_OK;
@@ -415,7 +414,7 @@ void kwp_bus_extract_data(uint8_t* response, uint32_t dataSize, uint8_t* dest) {
  * */
 BusStatus kwp_bus_get_response(BusResponse* resp, uint32_t timeout) {
 	uint8_t fByte, remain, msgSize;
-	uint8_t msg[OBD_BUS_RESPONSE_MAX];
+	uint8_t msg[OBD_BUS_RESPONSE_MAX] = {0};
 	BusStatus status;
 
 	if ((status = kwp_bus_read(&msg[0], sizeof(uint8_t), timeout)) != BUS_OK) {
